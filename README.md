@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current phase: `Phase 0 - Project Foundation`
+Current status: `Phase 1 - Product Requirements + Prior-Art Research`
 
-The repo structure, roadmap, and contribution workflow are being prepared before core code begins.
+The repo structure is ready. Product requirements, MVP boundaries, prior-art research, and ethical scope are being defined before scanner code begins.
 
 ## Safety Scope
 

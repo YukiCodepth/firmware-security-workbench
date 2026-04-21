@@ -59,3 +59,7 @@ The minimum useful version is complete after Phase 7:
 - produce structured JSON output
 
 Everything after that makes the project stronger, more innovative, and more showcase-ready.
+
+## Current Build Focus
+
+Phase 1 defines the product requirements and compares this project against existing firmware analysis tools. The next implementation phase is Phase 2, where the first CLI scanner will be built.
