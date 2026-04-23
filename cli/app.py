@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from .scanner import ScanError, scan_firmware
+from .storage import DEFAULT_DB_PATH, get_scan_record, list_scans, save_scan_result
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -41,6 +42,64 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=2000,
         help="Maximum extracted strings before truncation (default: 2000)",
+    )
+    scan_parser.add_argument(
+        "--db",
+        type=Path,
+        default=DEFAULT_DB_PATH,
+        help=f"SQLite database path for scan history (default: {DEFAULT_DB_PATH})",
+    )
+    scan_parser.add_argument(
+        "--no-save",
+        action="store_true",
+        help="Do not save this scan to the SQLite history database",
+    )
+
+    history_parser = subparsers.add_parser(
+        "history",
+        help="Read saved scan history from SQLite",
+    )
+    history_subparsers = history_parser.add_subparsers(
+        dest="history_command", required=True
+    )
+
+    history_list_parser = history_subparsers.add_parser(
+        "list",
+        help="List recent saved scans",
+    )
+    history_list_parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Maximum scans to list (default: 20)",
+    )
+    history_list_parser.add_argument(
+        "--db",
+        type=Path,
+        default=DEFAULT_DB_PATH,
+        help=f"SQLite database path (default: {DEFAULT_DB_PATH})",
+    )
+    history_list_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print JSON output",
+    )
+
+    history_show_parser = history_subparsers.add_parser(
+        "show",
+        help="Show one saved scan",
+    )
+    history_show_parser.add_argument("scan_id", type=int, help="Saved scan id")
+    history_show_parser.add_argument(
+        "--db",
+        type=Path,
+        default=DEFAULT_DB_PATH,
+        help=f"SQLite database path (default: {DEFAULT_DB_PATH})",
+    )
+    history_show_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print full JSON output",
     )
     return parser
 
@@ -93,6 +152,21 @@ def run_scan_command(args: argparse.Namespace) -> int:
         print(f"Invalid argument: {exc}", file=sys.stderr)
         return 2
 
+    saved_scan_id: int | None = None
+    if not args.no_save:
+        saved_scan_id = save_scan_result(result, db_path=args.db)
+        result["storage"] = {
+            "saved": True,
+            "scan_id": saved_scan_id,
+            "database_path": str(args.db.resolve()),
+        }
+    else:
+        result["storage"] = {
+            "saved": False,
+            "scan_id": None,
+            "database_path": str(args.db.resolve()),
+        }
+
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -101,9 +175,54 @@ def run_scan_command(args: argparse.Namespace) -> int:
         print(json.dumps(result, indent=2))
     else:
         _print_summary(result)
+        if saved_scan_id is not None:
+            print(f"Saved scan id: {saved_scan_id} (db: {args.db})")
+        else:
+            print(f"Scan was not saved (--no-save). Target db: {args.db}")
         if args.out:
             print(f"\nSaved JSON result: {args.out}")
 
+    return 0
+
+
+def _print_history_table(rows: list[dict[str, object]], db_path: Path) -> None:
+    print(f"Scan history from {db_path} ({len(rows)} entries)")
+    print("ID  UTC Timestamp                 Type         Findings  File")
+    print("--  ----------------------------  -----------  --------  ----------------")
+    for row in rows:
+        scan_id = row.get("id")
+        scanned_at = str(row.get("scanned_at_utc", ""))[:28]
+        file_type = str(row.get("type_guess", ""))[:11]
+        suspicious = row.get("suspicious_count", 0)
+        file_name = str(row.get("file_name", ""))
+        print(
+            f"{str(scan_id).rjust(2)}  {scanned_at:<28}  {file_type:<11}  "
+            f"{str(suspicious).rjust(8)}  {file_name}"
+        )
+
+
+def run_history_list_command(args: argparse.Namespace) -> int:
+    rows = list_scans(db_path=args.db, limit=args.limit)
+    if args.json:
+        print(json.dumps(rows, indent=2))
+    else:
+        _print_history_table(rows, args.db)
+    return 0
+
+
+def run_history_show_command(args: argparse.Namespace) -> int:
+    try:
+        record = get_scan_record(scan_id=args.scan_id, db_path=args.db)
+    except KeyError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    result = record["result"]
+    if args.json:
+        print(json.dumps(record, indent=2))
+    else:
+        print(f"Stored scan #{record['scan_id']} ({record['scanned_at_utc']})")
+        _print_summary(result)
     return 0
 
 
@@ -113,6 +232,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scan":
         return run_scan_command(args)
+    if args.command == "history":
+        if args.history_command == "list":
+            return run_history_list_command(args)
+        if args.history_command == "show":
+            return run_history_show_command(args)
+        print("Unknown history command.", file=sys.stderr)
+        return 2
 
     parser.print_help()
     return 1

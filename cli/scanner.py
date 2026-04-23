@@ -664,8 +664,8 @@ def scan_firmware(
     return {
         "scanner": {
             "name": "Firmware Security Workbench",
-            "version": "0.2.0-dev",
-            "phase": "03-format-detection",
+            "version": "0.3.0-dev",
+            "phase": "04-storage-layer",
             "scanned_at_utc": datetime.now(timezone.utc).isoformat(),
         },
         "file": {

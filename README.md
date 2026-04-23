@@ -61,16 +61,22 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 3 - Firmware Metadata + Format Detection`
+Current status: `Phase 4 - Local Storage Layer`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata for `ELF`, `Intel HEX`, and `UF2` as part of `v0.2.0-dev`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata and SQLite scan history as part of `v0.3.0-dev`.
 
-## Phase 2 Quick Start
+## Quick Start
 
 Run the scanner:
 
 ```bash
 ./scripts/fwb scan samples/demo-firmware.bin
+```
+
+Run scanner without saving:
+
+```bash
+./scripts/fwb scan samples/demo-firmware.bin --no-save
 ```
 
 Scan Intel HEX:
@@ -89,6 +95,18 @@ Write JSON report to disk:
 
 ```bash
 ./scripts/fwb scan samples/demo-firmware.bin --out reports/generated/demo-scan.json
+```
+
+List saved scan history:
+
+```bash
+./scripts/fwb history list
+```
+
+Show one saved scan:
+
+```bash
+./scripts/fwb history show 1 --json
 ```
 
 Run tests:

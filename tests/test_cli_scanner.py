@@ -14,6 +14,7 @@ from cli.scanner import (
     sha256_hex,
     shannon_entropy,
 )
+from cli.storage import get_scan_record, list_scans, save_scan_result
 
 
 class ScannerCoreTests(unittest.TestCase):
@@ -141,7 +142,15 @@ class ScannerCliTests(unittest.TestCase):
         firmware_path = repo_root / "samples" / "demo-firmware.bin"
 
         completed = subprocess.run(
-            [sys.executable, "-m", "cli", "scan", str(firmware_path), "--json"],
+            [
+                sys.executable,
+                "-m",
+                "cli",
+                "scan",
+                str(firmware_path),
+                "--json",
+                "--no-save",
+            ],
             cwd=repo_root,
             text=True,
             capture_output=True,
@@ -155,6 +164,101 @@ class ScannerCliTests(unittest.TestCase):
         self.assertIn("analysis", payload)
         self.assertIn("suspicious_findings", payload["analysis"])
         self.assertIn("format_details", payload["file"])
+        self.assertIn("storage", payload)
+
+    def test_cli_history_list_and_show(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        firmware_path = repo_root / "samples" / "demo-firmware.bin"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "fwb_history.sqlite3"
+
+            scan_cmd = [
+                sys.executable,
+                "-m",
+                "cli",
+                "scan",
+                str(firmware_path),
+                "--db",
+                str(db_path),
+                "--json",
+            ]
+            scan_run = subprocess.run(
+                scan_cmd,
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(scan_run.returncode, 0, msg=scan_run.stderr)
+            scan_payload = json.loads(scan_run.stdout)
+            scan_id = scan_payload["storage"]["scan_id"]
+
+            list_cmd = [
+                sys.executable,
+                "-m",
+                "cli",
+                "history",
+                "list",
+                "--db",
+                str(db_path),
+                "--json",
+            ]
+            list_run = subprocess.run(
+                list_cmd,
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(list_run.returncode, 0, msg=list_run.stderr)
+            history_rows = json.loads(list_run.stdout)
+            self.assertGreaterEqual(len(history_rows), 1)
+            self.assertEqual(history_rows[0]["id"], scan_id)
+
+            show_cmd = [
+                sys.executable,
+                "-m",
+                "cli",
+                "history",
+                "show",
+                str(scan_id),
+                "--db",
+                str(db_path),
+                "--json",
+            ]
+            show_run = subprocess.run(
+                show_cmd,
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(show_run.returncode, 0, msg=show_run.stderr)
+            show_payload = json.loads(show_run.stdout)
+            self.assertEqual(show_payload["scan_id"], scan_id)
+            self.assertIn("result", show_payload)
+            self.assertIn("file", show_payload["result"])
+
+
+class StorageLayerTests(unittest.TestCase):
+    def test_save_list_and_get_scan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "local_scans.sqlite3"
+            sample = scan_firmware(Path(__file__).resolve().parents[1] / "samples" / "demo-firmware.bin")
+
+            scan_id = save_scan_result(sample, db_path=db_path)
+            self.assertGreater(scan_id, 0)
+
+            rows = list_scans(db_path=db_path, limit=10)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["id"], scan_id)
+            self.assertEqual(rows[0]["file_name"], "demo-firmware.bin")
+
+            record = get_scan_record(scan_id=scan_id, db_path=db_path)
+            self.assertEqual(record["scan_id"], scan_id)
+            self.assertIn("result", record)
+            self.assertEqual(record["result"]["file"]["name"], "demo-firmware.bin")
 
 
 if __name__ == "__main__":
