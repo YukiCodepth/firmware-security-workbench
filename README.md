@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 6 - Web Dashboard Alpha`
+Current status: `Phase 7 - Security Detection MVP`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, and a browser dashboard as part of `v0.4.0-dev`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, a browser dashboard, and structured secret exposure detection with endpoint extraction as part of `v0.5.0-dev`.
 
 ## Quick Start
 

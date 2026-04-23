@@ -64,6 +64,9 @@ class ApiBackendTests(unittest.TestCase):
         created = create_response.json()
         self.assertEqual(created["file"]["name"], "api-demo.bin")
         self.assertTrue(created["storage"]["saved"])
+        self.assertGreater(created["analysis"]["secret_exposure_count"], 0)
+        self.assertGreater(created["analysis"]["endpoint_count"], 0)
+        self.assertIn("security_posture", created["analysis"])
         scan_id = created["storage"]["scan_id"]
         self.assertIsInstance(scan_id, int)
 
@@ -99,6 +102,7 @@ class ApiBackendTests(unittest.TestCase):
         created = create_response.json()
         self.assertFalse(created["storage"]["saved"])
         self.assertIsNone(created["storage"]["scan_id"])
+        self.assertGreater(created["analysis"]["secret_exposure_count"], 0)
 
         list_response = self.client.get(
             "/api/v1/scans",

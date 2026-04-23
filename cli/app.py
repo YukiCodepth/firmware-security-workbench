@@ -108,6 +108,9 @@ def _print_summary(result: dict[str, object]) -> None:
     file_info = result["file"]
     analysis = result["analysis"]
     findings = analysis["suspicious_findings"][:10]
+    secret_exposures = analysis.get("secret_exposures", [])[:8]
+    endpoints = analysis.get("endpoints_preview", [])[:8]
+    posture = analysis.get("security_posture", {})
     format_details = file_info.get("format_details", {})
 
     print("Firmware Security Workbench Scan")
@@ -124,18 +127,38 @@ def _print_summary(result: dict[str, object]) -> None:
     print(f"Entropy: {analysis['entropy']}")
     print(f"Extracted strings: {analysis['strings_count']}")
     print(f"Suspicious findings: {analysis['suspicious_count']}")
+    print(f"Secret exposures: {analysis.get('secret_exposure_count', 0)}")
+    print(f"Network endpoints: {analysis.get('endpoint_count', 0)}")
+    if isinstance(posture, dict) and posture:
+        print(
+            f"Security posture: {posture.get('risk_level', '-')}"
+            f" (score {posture.get('score', '-')}, top severity {posture.get('top_severity', '-')})"
+        )
 
     if not findings:
         print("\nNo suspicious keyword findings in extracted strings.")
-        return
+    else:
+        print("\nTop suspicious findings:")
+        for finding in findings:
+            print(
+                f"- [{finding['severity']}/{finding['confidence']}] "
+                f"{finding['offset_hex']} keywords={','.join(finding['keywords'])} "
+                f"text={finding['string']}"
+            )
 
-    print("\nTop suspicious findings:")
-    for finding in findings:
-        print(
-            f"- [{finding['severity']}/{finding['confidence']}] "
-            f"{finding['offset_hex']} keywords={','.join(finding['keywords'])} "
-            f"text={finding['string']}"
-        )
+    if secret_exposures:
+        print("\nTop secret exposures:")
+        for exposure in secret_exposures:
+            print(
+                f"- [{exposure['severity']}/{exposure['confidence']}] "
+                f"{exposure['offset_hex']} {exposure['indicator']} "
+                f"{exposure['evidence_redacted']}"
+            )
+
+    if endpoints:
+        print("\nEndpoint preview:")
+        for endpoint in endpoints:
+            print(f"- {endpoint}")
 
 
 def run_scan_command(args: argparse.Namespace) -> int:

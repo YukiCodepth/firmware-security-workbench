@@ -60,6 +60,54 @@ KEYWORD_RULES: list[tuple[str, str, str]] = [
     ("debug", "low", "low"),
 ]
 
+SECRET_REGEX_RULES: list[tuple[str, str, re.Pattern[str], str, str]] = [
+    (
+        "credential_assignment",
+        "credentials",
+        re.compile(
+            r"(?i)\b(?P<key>(?:wifi_)?password|passwd|pwd|secret|token|"
+            r"api[_-]?key|access[_-]?token)\b\s*[:=]\s*(?P<value>[^\s\"';]+)"
+        ),
+        "high",
+        "high",
+    ),
+    (
+        "private_key_header",
+        "crypto_material",
+        re.compile(r"(?i)-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"),
+        "critical",
+        "high",
+    ),
+    (
+        "jwt_token",
+        "credentials",
+        re.compile(
+            r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"
+        ),
+        "high",
+        "medium",
+    ),
+    (
+        "aws_access_key_id",
+        "cloud_credentials",
+        re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+        "high",
+        "medium",
+    ),
+    (
+        "bearer_token",
+        "credentials",
+        re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-+/=]{16,}\b"),
+        "high",
+        "medium",
+    ),
+]
+
+NETWORK_ENDPOINT_REGEX = re.compile(
+    r"\b(?:https?:\/\/|mqtt:\/\/|ws:\/\/|wss:\/\/|ftp:\/\/)[^\s\"']+",
+    re.IGNORECASE,
+)
+
 
 class ScanError(Exception):
     """Raised when a scan cannot be completed."""
@@ -591,6 +639,135 @@ def _higher_ranked(left: str, right: str, rank_table: dict[str, int]) -> str:
     return right
 
 
+def _mask_secret_value(value: str) -> str:
+    if not value:
+        return ""
+    if len(value) <= 2:
+        return "*" * len(value)
+    if len(value) <= 6:
+        return f"{value[0]}{'*' * (len(value) - 2)}{value[-1]}"
+    return f"{value[:2]}{'*' * (len(value) - 4)}{value[-2:]}"
+
+
+def detect_secret_exposures(
+    extracted_strings: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    findings: list[dict[str, object]] = []
+    dedupe: set[tuple[int, str, str]] = set()
+
+    for item in extracted_strings:
+        raw_value = item.get("value")
+        raw_offset = item.get("offset")
+        if not isinstance(raw_value, str) or not isinstance(raw_offset, int):
+            continue
+
+        for rule_id, category, pattern, severity, confidence in SECRET_REGEX_RULES:
+            for match in pattern.finditer(raw_value):
+                evidence = match.group(0)[:220]
+                indicator = rule_id
+                redacted_evidence = evidence
+
+                groups = match.groupdict()
+                key_name = groups.get("key")
+                secret_value = groups.get("value")
+                if isinstance(key_name, str) and key_name:
+                    indicator = key_name.lower()
+                if isinstance(secret_value, str) and secret_value:
+                    redacted_value = _mask_secret_value(secret_value)
+                    redacted_evidence = evidence.replace(secret_value, redacted_value, 1)
+
+                key = (raw_offset, rule_id, redacted_evidence)
+                if key in dedupe:
+                    continue
+                dedupe.add(key)
+
+                findings.append(
+                    {
+                        "indicator": indicator,
+                        "rule_id": rule_id,
+                        "category": category,
+                        "severity": severity,
+                        "confidence": confidence,
+                        "offset": raw_offset,
+                        "offset_hex": hex(raw_offset),
+                        "evidence_redacted": redacted_evidence,
+                    }
+                )
+
+    findings.sort(
+        key=lambda item: (
+            SEVERITY_RANK[item["severity"]],
+            CONFIDENCE_RANK[item["confidence"]],
+            -int(item["offset"]),
+        ),
+        reverse=True,
+    )
+    return findings
+
+
+def extract_network_endpoints(
+    extracted_strings: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    endpoints: list[dict[str, object]] = []
+    seen: set[str] = set()
+
+    for item in extracted_strings:
+        raw_value = item.get("value")
+        raw_offset = item.get("offset")
+        if not isinstance(raw_value, str) or not isinstance(raw_offset, int):
+            continue
+        for match in NETWORK_ENDPOINT_REGEX.finditer(raw_value):
+            url = match.group(0)
+            if url in seen:
+                continue
+            seen.add(url)
+            scheme = url.split("://", 1)[0].lower() if "://" in url else "unknown"
+            endpoints.append(
+                {
+                    "url": url,
+                    "scheme": scheme,
+                    "offset": raw_offset,
+                    "offset_hex": hex(raw_offset),
+                }
+            )
+
+    endpoints.sort(key=lambda item: (item["scheme"], item["url"]))
+    return endpoints
+
+
+def summarize_security_posture(
+    suspicious_findings: list[dict[str, object]],
+    secret_exposures: list[dict[str, object]],
+    endpoints: list[dict[str, object]],
+) -> dict[str, object]:
+    top_severity = "info"
+    for finding in suspicious_findings:
+        severity = finding.get("severity")
+        if isinstance(severity, str):
+            top_severity = _higher_ranked(top_severity, severity, SEVERITY_RANK)
+    for secret in secret_exposures:
+        severity = secret.get("severity")
+        if isinstance(severity, str):
+            top_severity = _higher_ranked(top_severity, severity, SEVERITY_RANK)
+
+    score = min(
+        100,
+        len(suspicious_findings) * 6 + len(secret_exposures) * 12 + len(endpoints) * 4,
+    )
+    if top_severity in {"critical", "high"} or score >= 70:
+        risk_level = "high"
+    elif score >= 35:
+        risk_level = "medium"
+    else:
+        risk_level = "low"
+
+    return {
+        "risk_level": risk_level,
+        "score": score,
+        "top_severity": top_severity,
+    }
+
+
 def detect_suspicious_strings(
     extracted_strings: list[dict[str, object]],
 ) -> list[dict[str, object]]:
@@ -659,13 +836,20 @@ def scan_firmware(
         data, min_length=min_string_length, max_strings=max_strings
     )
     suspicious_findings = detect_suspicious_strings(strings)
+    secret_exposures = detect_secret_exposures(strings)
+    endpoints = extract_network_endpoints(strings)
+    security_posture = summarize_security_posture(
+        suspicious_findings=suspicious_findings,
+        secret_exposures=secret_exposures,
+        endpoints=endpoints,
+    )
     type_guess, format_details, architecture_hint = analyze_format(path, data)
 
     return {
         "scanner": {
             "name": "Firmware Security Workbench",
-            "version": "0.3.0-dev",
-            "phase": "05-fastapi-backend",
+            "version": "0.5.0-dev",
+            "phase": "07-secrets-scanner",
             "scanned_at_utc": datetime.now(timezone.utc).isoformat(),
         },
         "file": {
@@ -685,5 +869,10 @@ def scan_firmware(
             "strings_preview": [entry["value"] for entry in strings[:25]],
             "suspicious_count": len(suspicious_findings),
             "suspicious_findings": suspicious_findings,
+            "secret_exposure_count": len(secret_exposures),
+            "secret_exposures": secret_exposures[:50],
+            "endpoint_count": len(endpoints),
+            "endpoints_preview": [item["url"] for item in endpoints[:20]],
+            "security_posture": security_posture,
         },
     }
