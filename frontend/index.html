@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firmware Security Workbench Dashboard</title>
+    <link rel="stylesheet" href="/dashboard/static/dashboard.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand-block">
+        <h1>Firmware Security Workbench</h1>
+        <p class="subtitle">Dashboard Alpha</p>
+      </div>
+      <div class="header-actions">
+        <a class="icon-button" href="/docs" title="Open API docs" aria-label="Open API docs">
+          <span class="icon" aria-hidden="true">?</span>
+        </a>
+        <button id="refresh-history" class="icon-button" title="Refresh scan history" aria-label="Refresh scan history">
+          <span class="icon" aria-hidden="true">&#x21bb;</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel scan-panel">
+        <h2>Scan Firmware</h2>
+
+        <form id="scan-form" class="scan-form">
+          <label for="firmware-file">Firmware file</label>
+          <input id="firmware-file" name="file" type="file" required />
+
+          <div class="controls-grid">
+            <label class="control-group" for="min-string-length">
+              <span>Min string length</span>
+              <input id="min-string-length" type="number" min="2" value="4" />
+            </label>
+
+            <label class="control-group" for="max-strings">
+              <span>Max strings</span>
+              <input id="max-strings" type="number" min="1" value="2000" />
+            </label>
+
+            <label class="control-group" for="history-limit">
+              <span>History limit</span>
+              <input id="history-limit" type="number" min="1" max="200" value="20" />
+            </label>
+
+            <label class="control-group" for="db-path">
+              <span>Database path</span>
+              <input
+                id="db-path"
+                type="text"
+                value="reports/generated/fwb_scans.sqlite3"
+                autocomplete="off"
+              />
+            </label>
+          </div>
+
+          <label class="checkbox-row" for="save-scan">
+            <input id="save-scan" type="checkbox" checked />
+            <span>Save scan to SQLite history</span>
+          </label>
+
+          <div class="button-row">
+            <button id="run-scan-btn" class="primary-button" type="submit">
+              <span class="icon" aria-hidden="true">&#x25b6;</span>
+              <span>Run Scan</span>
+            </button>
+            <button id="clear-detail-btn" class="secondary-button" type="button">
+              <span class="icon" aria-hidden="true">&#x2715;</span>
+              <span>Clear Detail</span>
+            </button>
+          </div>
+        </form>
+
+        <div id="scan-status" class="status-line" aria-live="polite"></div>
+      </section>
+
+      <section class="panel history-panel">
+        <div class="panel-title-row">
+          <h2>Saved Scans</h2>
+          <button id="load-history" class="icon-button" title="Reload list" aria-label="Reload list">
+            <span class="icon" aria-hidden="true">&#x21bb;</span>
+          </button>
+        </div>
+
+        <div class="history-wrap">
+          <table id="history-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>UTC</th>
+                <th>Type</th>
+                <th>Findings</th>
+                <th>File</th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel detail-panel">
+        <h2>Scan Detail</h2>
+        <div class="metric-grid">
+          <div class="metric">
+            <div class="metric-label">File</div>
+            <div id="metric-file" class="metric-value">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Type</div>
+            <div id="metric-type" class="metric-value">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Entropy</div>
+            <div id="metric-entropy" class="metric-value">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Findings</div>
+            <div id="metric-findings" class="metric-value">-</div>
+          </div>
+        </div>
+
+        <div class="detail-columns">
+          <div class="detail-block">
+            <h3>Top Findings</h3>
+            <ul id="finding-list"></ul>
+          </div>
+          <div class="detail-block">
+            <h3>Strings Preview</h3>
+            <ul id="strings-list"></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/dashboard/static/dashboard.js" defer></script>
+  </body>
+</html>

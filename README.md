@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 5 - FastAPI Backend`
+Current status: `Phase 6 - Web Dashboard Alpha`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, and a local FastAPI backend as part of `v0.3.0-dev`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, and a browser dashboard as part of `v0.4.0-dev`.
 
 ## Quick Start
 
@@ -127,6 +127,12 @@ API docs:
 http://127.0.0.1:8000/docs
 ```
 
+Dashboard:
+
+```text
+http://127.0.0.1:8000/dashboard
+```
+
 ## Safety Scope
 
 This project is for defensive firmware analysis, developer education, and security auditing. It does not include exploit generation, unauthorized device access, credential abuse, or malware deployment.
@@ -135,9 +141,9 @@ This project is for defensive firmware analysis, developer education, and securi
 
 ```text
 backend/          FastAPI backend
-cli/              Future command-line scanner
+cli/              Command-line scanner
 docs/             Project docs, architecture, learning notes
-frontend/         Future web dashboard
+frontend/         Dashboard UI (Phase 6 alpha)
 reports/          Report templates and generated report output
 rules/            Detection rules, including YARA rules
 samples/          Safe sample firmware and test fixtures

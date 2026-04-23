@@ -4,7 +4,8 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from cli.scanner import ScanError, scan_firmware
 from cli.storage import DEFAULT_DB_PATH, get_scan_record, list_scans, save_scan_result
@@ -53,6 +54,11 @@ app = FastAPI(
     description="Local API for firmware scanning and scan history",
 )
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
+
+app.mount("/dashboard/static", StaticFiles(directory=FRONTEND_DIR), name="dashboard-static")
+
 
 @app.get("/")
 def root() -> dict[str, object]:
@@ -69,6 +75,11 @@ def root() -> dict[str, object]:
 @app.get("/favicon.ico")
 def favicon() -> JSONResponse:
     return JSONResponse(status_code=204, content=None)
+
+
+@app.get("/dashboard")
+def dashboard() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
 @app.get("/health")

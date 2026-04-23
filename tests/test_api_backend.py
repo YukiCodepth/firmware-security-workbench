@@ -33,6 +33,12 @@ class ApiBackendTests(unittest.TestCase):
         self.assertEqual(payload["docs_url"], "/docs")
         self.assertEqual(payload["api_base"], "/api/v1")
 
+    def test_dashboard_entrypoint(self) -> None:
+        response = self.client.get("/dashboard")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers.get("content-type", ""))
+        self.assertIn("Firmware Security Workbench", response.text)
+
     def test_scan_create_list_and_show(self) -> None:
         firmware_bytes = (
             b"FWB_API_TEST\nwifi_password=test123\nmqtt://broker.local\nDEBUG: ready\n"
