@@ -136,6 +136,8 @@ def _print_summary(result: dict[str, object]) -> None:
     posture = analysis.get("security_posture", {})
     rule_matches = analysis.get("rule_matches", [])[:6]
     component_candidates = analysis.get("component_candidates", [])[:8]
+    cve_candidates = analysis.get("cve_candidates", [])[:8]
+    cve_confidence = analysis.get("cve_confidence_summary", {})
     format_details = file_info.get("format_details", {})
 
     print("Firmware Security Workbench Scan")
@@ -157,6 +159,10 @@ def _print_summary(result: dict[str, object]) -> None:
     print(
         f"SBOM candidates: {analysis.get('component_candidate_count', 0)} "
         f"(sbom components={analysis.get('sbom_component_count', 0)})"
+    )
+    print(
+        f"CVE candidates: {analysis.get('cve_candidate_count', 0)} "
+        f"(high={cve_confidence.get('high', 0)}, medium={cve_confidence.get('medium', 0)}, low={cve_confidence.get('low', 0)})"
     )
     print(
         f"Rules engine: {analysis.get('rule_engine', '-')} "
@@ -208,6 +214,15 @@ def _print_summary(result: dict[str, object]) -> None:
             print(
                 f"- [{candidate.get('confidence', 'low')}] "
                 f"{candidate.get('name', 'unknown')} {candidate.get('version', '?')}"
+            )
+
+    if cve_candidates:
+        print("\nTop CVE candidates:")
+        for candidate in cve_candidates:
+            print(
+                f"- [{candidate.get('confidence', 'low')}] {candidate.get('cve_id', 'UNKNOWN-CVE')} "
+                f"{candidate.get('component_name', 'unknown')} {candidate.get('component_version', '?')} "
+                f"severity={candidate.get('severity', 'unknown')} cvss={candidate.get('cvss_base_score', '-')}"
             )
 
 

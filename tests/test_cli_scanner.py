@@ -55,6 +55,8 @@ class ScannerCoreTests(unittest.TestCase):
             self.assertIn("rule_match_count", result["analysis"])
             self.assertGreater(result["analysis"]["rule_match_count"], 0)
             self.assertIn("component_candidate_count", result["analysis"])
+            self.assertIn("cve_candidate_count", result["analysis"])
+            self.assertIn("cve_candidates", result["analysis"])
             self.assertIn("sbom", result)
             self.assertIn("components", result["sbom"])
 
@@ -80,11 +82,16 @@ class ScannerCoreTests(unittest.TestCase):
             self.assertGreaterEqual(result["analysis"]["component_candidate_count"], 3)
             names = {item["name"] for item in result["analysis"]["component_candidates"]}
             self.assertTrue({"OpenSSL", "BusyBox", "zlib"}.issubset(names))
+            self.assertGreaterEqual(result["analysis"]["cve_candidate_count"], 2)
+            cve_ids = {item["cve_id"] for item in result["analysis"]["cve_candidates"]}
+            self.assertIn("CVE-2023-0286", cve_ids)
+            self.assertIn("CVE-2018-25032", cve_ids)
 
             sbom = result["sbom"]
             self.assertEqual(sbom["bomFormat"], "CycloneDX")
             self.assertEqual(sbom["specVersion"], "1.5")
             self.assertGreaterEqual(len(sbom["components"]), 4)
+            self.assertGreaterEqual(len(sbom.get("vulnerabilities", [])), 2)
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -260,6 +267,7 @@ class ScannerCliTests(unittest.TestCase):
         self.assertIn("format_details", payload["file"])
         self.assertIn("rule_match_count", payload["analysis"])
         self.assertIn("component_candidate_count", payload["analysis"])
+        self.assertIn("cve_candidate_count", payload["analysis"])
         self.assertIn("sbom", payload)
         self.assertIn("storage", payload)
 
@@ -291,6 +299,7 @@ class ScannerCliTests(unittest.TestCase):
             sbom_payload = json.loads(sbom_path.read_text(encoding="utf-8"))
             self.assertEqual(sbom_payload["bomFormat"], "CycloneDX")
             self.assertIn("components", sbom_payload)
+            self.assertIn("vulnerabilities", sbom_payload)
 
     def test_cli_history_list_and_show(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
