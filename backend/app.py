@@ -7,6 +7,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from cli.rule_engine import DEFAULT_RULES_DIR
 from cli.scanner import ScanError, scan_firmware
 from cli.storage import DEFAULT_DB_PATH, get_scan_record, list_scans, save_scan_result
 
@@ -22,6 +23,8 @@ def _scan_uploaded_file(
     *,
     min_string_length: int,
     max_strings: int,
+    enable_rules: bool,
+    rules_dir: str | None,
 ) -> dict[str, object]:
     suffix = Path(uploaded_file.filename or "upload.bin").suffix or ".bin"
     temp_path = None
@@ -35,6 +38,8 @@ def _scan_uploaded_file(
             temp_path,
             min_string_length=min_string_length,
             max_strings=max_strings,
+            enable_rules=enable_rules,
+            rules_dir=rules_dir,
         )
     except ScanError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -50,7 +55,7 @@ def _scan_uploaded_file(
 
 app = FastAPI(
     title="Firmware Security Workbench API",
-    version="0.5.0-dev",
+    version="0.6.0-dev",
     description="Local API for firmware scanning and scan history",
 )
 
@@ -65,7 +70,7 @@ def root() -> dict[str, object]:
     return {
         "service": "Firmware Security Workbench API",
         "status": "ok",
-        "version": "0.5.0-dev",
+        "version": "0.6.0-dev",
         "docs_url": "/docs",
         "health_url": "/health",
         "api_base": "/api/v1",
@@ -84,7 +89,7 @@ def dashboard() -> FileResponse:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "fwb-api", "version": "0.5.0-dev"}
+    return {"status": "ok", "service": "fwb-api", "version": "0.6.0-dev"}
 
 
 @app.post("/api/v1/scans")
@@ -92,6 +97,8 @@ def create_scan(
     file: UploadFile = File(...),
     min_string_length: int = Form(4),
     max_strings: int = Form(2000),
+    enable_rules: bool = Form(True),
+    rules_dir: str | None = Form(str(DEFAULT_RULES_DIR)),
     save: bool = Form(True),
     db_path: str | None = Form(None),
 ) -> dict[str, object]:
@@ -104,6 +111,8 @@ def create_scan(
         file,
         min_string_length=min_string_length,
         max_strings=max_strings,
+        enable_rules=enable_rules,
+        rules_dir=rules_dir,
     )
     target_db = _db_path_from_param(db_path)
 

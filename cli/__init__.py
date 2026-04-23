@@ -1,3 +1,3 @@
 """Firmware Security Workbench CLI package."""
 
-__all__ = ["app", "scanner", "storage"]
+__all__ = ["app", "rule_engine", "scanner", "storage"]

@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 7 - Security Detection MVP`
+Current status: `Phase 8 - YARA + Rules Engine`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, a browser dashboard, and structured secret exposure detection with endpoint extraction as part of `v0.5.0-dev`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, a browser dashboard, structured secret exposure detection, and a YARA-compatible rules engine with built-in and custom rule loading as part of `v0.6.0-dev`.
 
 ## Quick Start
 
@@ -89,6 +89,12 @@ Print full JSON output:
 
 ```bash
 ./scripts/fwb scan samples/demo-firmware.bin --json
+```
+
+Run with an additional custom YARA rule file:
+
+```bash
+./scripts/fwb scan samples/demo-firmware.bin --rules-file rules/yara/fwb_core_rules.yar
 ```
 
 Write JSON report to disk:

@@ -40,6 +40,7 @@ class ApiBackendTests(unittest.TestCase):
         self.assertIn("Firmware Security Workbench", response.text)
         self.assertIn("Dashboard Assistant", response.text)
         self.assertIn("Risk DNA", response.text)
+        self.assertIn("YARA matches", response.text)
 
     def test_dashboard_logo_asset(self) -> None:
         response = self.client.get("/dashboard/static/logo-fwb.svg")
@@ -67,6 +68,8 @@ class ApiBackendTests(unittest.TestCase):
         self.assertGreater(created["analysis"]["secret_exposure_count"], 0)
         self.assertGreater(created["analysis"]["endpoint_count"], 0)
         self.assertIn("security_posture", created["analysis"])
+        self.assertIn("rule_engine", created["analysis"])
+        self.assertIn("rule_match_count", created["analysis"])
         scan_id = created["storage"]["scan_id"]
         self.assertIsInstance(scan_id, int)
 
@@ -103,6 +106,7 @@ class ApiBackendTests(unittest.TestCase):
         self.assertFalse(created["storage"]["saved"])
         self.assertIsNone(created["storage"]["scan_id"])
         self.assertGreater(created["analysis"]["secret_exposure_count"], 0)
+        self.assertIn("rule_match_count", created["analysis"])
 
         list_response = self.client.get(
             "/api/v1/scans",

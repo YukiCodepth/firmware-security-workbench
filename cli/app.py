@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from .rule_engine import DEFAULT_RULES_DIR
 from .scanner import ScanError, scan_firmware
 from .storage import DEFAULT_DB_PATH, get_scan_record, list_scans, save_scan_result
 
@@ -42,6 +43,23 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=2000,
         help="Maximum extracted strings before truncation (default: 2000)",
+    )
+    scan_parser.add_argument(
+        "--no-rules",
+        action="store_true",
+        help="Disable YARA/rules-engine scanning",
+    )
+    scan_parser.add_argument(
+        "--rules-dir",
+        type=Path,
+        default=DEFAULT_RULES_DIR,
+        help=f"Directory containing YARA rule files (default: {DEFAULT_RULES_DIR})",
+    )
+    scan_parser.add_argument(
+        "--rules-file",
+        type=Path,
+        action="append",
+        help="Additional YARA rule file path. Can be passed multiple times.",
     )
     scan_parser.add_argument(
         "--db",
@@ -111,6 +129,7 @@ def _print_summary(result: dict[str, object]) -> None:
     secret_exposures = analysis.get("secret_exposures", [])[:8]
     endpoints = analysis.get("endpoints_preview", [])[:8]
     posture = analysis.get("security_posture", {})
+    rule_matches = analysis.get("rule_matches", [])[:6]
     format_details = file_info.get("format_details", {})
 
     print("Firmware Security Workbench Scan")
@@ -129,6 +148,10 @@ def _print_summary(result: dict[str, object]) -> None:
     print(f"Suspicious findings: {analysis['suspicious_count']}")
     print(f"Secret exposures: {analysis.get('secret_exposure_count', 0)}")
     print(f"Network endpoints: {analysis.get('endpoint_count', 0)}")
+    print(
+        f"Rules engine: {analysis.get('rule_engine', '-')} "
+        f"(loaded={analysis.get('rules_loaded', 0)}, matches={analysis.get('rule_match_count', 0)})"
+    )
     if isinstance(posture, dict) and posture:
         print(
             f"Security posture: {posture.get('risk_level', '-')}"
@@ -160,6 +183,15 @@ def _print_summary(result: dict[str, object]) -> None:
         for endpoint in endpoints:
             print(f"- {endpoint}")
 
+    if rule_matches:
+        print("\nTop rule matches:")
+        for match in rule_matches:
+            print(
+                f"- [{match.get('severity', 'info')}] "
+                f"{match.get('rule_name', 'unknown_rule')} "
+                f"tags={','.join(match.get('tags', []))}"
+            )
+
 
 def run_scan_command(args: argparse.Namespace) -> int:
     try:
@@ -167,6 +199,9 @@ def run_scan_command(args: argparse.Namespace) -> int:
             args.file,
             min_string_length=args.min_string_length,
             max_strings=args.max_strings,
+            enable_rules=not args.no_rules,
+            rules_dir=args.rules_dir,
+            rule_paths=args.rules_file,
         )
     except ScanError as exc:
         print(f"Scan failed: {exc}", file=sys.stderr)
