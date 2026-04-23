@@ -111,6 +111,6 @@ A phase is complete only when:
 
 ## Current Build Focus
 
-Current roadmap phase: `Phase 1b - Release-Driven Roadmap`
+Current roadmap phase: `Phase 2 - CLI Scanner MVP`
 
-Next implementation phase: `Phase 2 - CLI Scanner MVP`
+Next implementation phase: `Phase 3 - Firmware Metadata + Format Detection`

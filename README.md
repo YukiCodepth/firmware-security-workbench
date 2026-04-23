@@ -61,9 +61,35 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 1b - Release-Driven Roadmap`
+Current status: `Phase 2 - CLI Scanner MVP`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, and ethical scope are ready. The roadmap now includes milestone GitHub releases from `v0.1.0` through `v1.0.0`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. We are now implementing the first scanner command for `v0.1.0`.
+
+## Phase 2 Quick Start
+
+Run the scanner:
+
+```bash
+./scripts/fwb scan samples/demo-firmware.bin
+```
+
+Print full JSON output:
+
+```bash
+./scripts/fwb scan samples/demo-firmware.bin --json
+```
+
+Write JSON report to disk:
+
+```bash
+./scripts/fwb scan samples/demo-firmware.bin --out reports/generated/demo-scan.json
+```
+
+Run tests:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
 
 ## Safety Scope
 

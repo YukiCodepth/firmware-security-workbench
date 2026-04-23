@@ -1,0 +1,9 @@
+FWB_DEMO_FIRMWARE_V1
+BUILD=2026-04-23
+device_name=lab-sensor-01
+wifi_ssid=lab-network
+wifi_password=demo1234
+mqtt://broker.internal.local:1883
+ota_update_url=http://updates.internal.local/fw.bin
+DEBUG: boot complete
+admin_panel_enabled=true
