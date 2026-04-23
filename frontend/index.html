@@ -4,13 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Firmware Security Workbench Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+    />
     <link rel="stylesheet" href="/dashboard/static/dashboard.css" />
   </head>
   <body>
     <header class="app-header">
-      <div class="brand-block">
-        <h1>Firmware Security Workbench</h1>
-        <p class="subtitle">Dashboard Alpha</p>
+      <div class="brand-cluster">
+        <img
+          src="/dashboard/static/logo-fwb.svg"
+          class="brand-logo"
+          alt="Firmware Security Workbench logo"
+        />
+        <div class="brand-block">
+          <h1>Firmware Security Workbench</h1>
+          <p class="subtitle">Dashboard Alpha</p>
+        </div>
       </div>
       <div class="header-actions">
         <a class="icon-button" href="/docs" title="Open API docs" aria-label="Open API docs">
@@ -132,6 +143,37 @@
             <ul id="strings-list"></ul>
           </div>
         </div>
+      </section>
+
+      <section class="panel assistant-panel">
+        <div class="panel-title-row">
+          <h2>Dashboard Assistant</h2>
+          <button id="clear-assistant-btn" class="icon-button" title="Clear assistant chat" aria-label="Clear assistant chat">
+            <span class="icon" aria-hidden="true">&#x2715;</span>
+          </button>
+        </div>
+
+        <div class="assistant-quick">
+          <button class="assist-chip" data-ask="How many scans are in history?">History count</button>
+          <button class="assist-chip" data-ask="What is the most severe finding in selected scan?">Top severity</button>
+          <button class="assist-chip" data-ask="Give me a summary of selected scan.">Selected summary</button>
+        </div>
+
+        <ul id="assistant-chat" class="assistant-chat"></ul>
+
+        <form id="assistant-form" class="assistant-form">
+          <input
+            id="assistant-input"
+            type="text"
+            placeholder="Ask about findings, scan history, entropy, file type..."
+            autocomplete="off"
+            required
+          />
+          <button class="primary-button" type="submit">
+            <span class="icon" aria-hidden="true">&#x27a4;</span>
+            <span>Ask</span>
+          </button>
+        </form>
       </section>
     </main>
 

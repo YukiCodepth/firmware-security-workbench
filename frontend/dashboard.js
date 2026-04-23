@@ -1,6 +1,7 @@
 const state = {
   scans: [],
   selectedScanId: null,
+  selectedRecord: null,
 };
 
 const refs = {
@@ -22,7 +23,14 @@ const refs = {
   metricFindings: document.getElementById("metric-findings"),
   findingList: document.getElementById("finding-list"),
   stringsList: document.getElementById("strings-list"),
+  assistantChat: document.getElementById("assistant-chat"),
+  assistantForm: document.getElementById("assistant-form"),
+  assistantInput: document.getElementById("assistant-input"),
+  clearAssistant: document.getElementById("clear-assistant-btn"),
+  assistChips: Array.from(document.querySelectorAll(".assist-chip")),
 };
+
+const SEVERITY_RANK = { info: 0, low: 1, medium: 2, high: 3, critical: 4 };
 
 function setStatus(message, kind = "info") {
   refs.scanStatus.textContent = message;
@@ -33,6 +41,113 @@ function setStatus(message, kind = "info") {
 function getDbPath() {
   const value = refs.dbPath.value.trim();
   return value || "reports/generated/fwb_scans.sqlite3";
+}
+
+function addAssistantMessage(role, text) {
+  const li = document.createElement("li");
+  li.className = `assistant-msg ${role}`;
+  li.textContent = `${role === "user" ? "You" : "Assistant"}: ${text}`;
+  refs.assistantChat.appendChild(li);
+  refs.assistantChat.scrollTop = refs.assistantChat.scrollHeight;
+}
+
+function clearAssistantMessages() {
+  refs.assistantChat.innerHTML = "";
+  addAssistantMessage(
+    "bot",
+    "Ask me about scan history, selected scan findings, entropy, or file type."
+  );
+}
+
+function currentResult() {
+  return state.selectedRecord?.result || null;
+}
+
+function highestSeverity(findings) {
+  if (!Array.isArray(findings) || findings.length === 0) {
+    return null;
+  }
+  let best = findings[0];
+  for (const finding of findings) {
+    const bestRank = SEVERITY_RANK[best.severity] ?? -1;
+    const currentRank = SEVERITY_RANK[finding.severity] ?? -1;
+    if (currentRank > bestRank) {
+      best = finding;
+    }
+  }
+  return best;
+}
+
+function assistantReply(questionRaw) {
+  const question = questionRaw.toLowerCase().trim();
+  const result = currentResult();
+  const analysis = result?.analysis || {};
+  const file = result?.file || {};
+  const findings = Array.isArray(analysis.suspicious_findings)
+    ? analysis.suspicious_findings
+    : [];
+
+  if (
+    question.includes("help") ||
+    question.includes("what can you do") ||
+    question.includes("commands")
+  ) {
+    return "I can summarize selected scan, count history entries, report top severity, entropy, type, and suggest next checks.";
+  }
+  if (question.includes("how many") && question.includes("scan")) {
+    return `There are ${state.scans.length} scans in current history view.`;
+  }
+  if (question.includes("latest") && question.includes("scan")) {
+    if (state.scans.length === 0) {
+      return "No scans in history yet.";
+    }
+    const latest = state.scans[0];
+    return `Latest is scan #${latest.id}: ${latest.file_name} (${latest.type_guess}), findings=${latest.suspicious_count}.`;
+  }
+  if (question.includes("selected") && question.includes("summary")) {
+    if (!result) {
+      return "No scan selected. Click one from history or run a new scan.";
+    }
+    return `Selected ${file.name || "scan"} is ${file.type_guess || "unknown type"}, entropy ${analysis.entropy ?? "-"}, findings ${analysis.suspicious_count ?? 0}.`;
+  }
+  if (question.includes("entropy")) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    return `Selected scan entropy is ${analysis.entropy ?? "unknown"}.`;
+  }
+  if (question.includes("type") || question.includes("format")) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    return `Selected file type is ${file.type_guess || "unknown"}.`;
+  }
+  if (
+    question.includes("most severe") ||
+    question.includes("top severity") ||
+    question.includes("critical")
+  ) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    const top = highestSeverity(findings);
+    if (!top) {
+      return "Selected scan has no suspicious findings.";
+    }
+    return `Top severity is ${top.severity} at ${top.offset_hex}, keywords ${Array.isArray(top.keywords) ? top.keywords.join(",") : "-"}.`;
+  }
+  if (question.includes("next") || question.includes("what should i do")) {
+    if (!result) {
+      return "Run a scan first, then I can suggest targeted next steps.";
+    }
+    const count = analysis.suspicious_count ?? 0;
+    if (count === 0) {
+      return "Good baseline. Next: diff against previous firmware and add custom YARA rules.";
+    }
+    return "Next: inspect highest-severity findings, verify credentials/endpoints manually, then run firmware diff against previous version.";
+  }
+
+  return "I did not catch that yet. Try: history count, selected summary, top severity, entropy, latest scan, or next steps.";
 }
 
 async function fetchJson(url, options = {}) {
@@ -86,6 +201,7 @@ function renderHistoryRows() {
 }
 
 function renderDetail(record) {
+  state.selectedRecord = record;
   const result = record?.result || {};
   const file = result.file || {};
   const analysis = result.analysis || {};
@@ -130,6 +246,7 @@ function renderDetail(record) {
 
 function clearDetail() {
   state.selectedScanId = null;
+  state.selectedRecord = null;
   refs.metricFile.textContent = "-";
   refs.metricType.textContent = "-";
   refs.metricEntropy.textContent = "-";
@@ -196,6 +313,15 @@ async function submitScan(event) {
   }
 }
 
+function askAssistant(question) {
+  const clean = question.trim();
+  if (!clean) {
+    return;
+  }
+  addAssistantMessage("user", clean);
+  addAssistantMessage("bot", assistantReply(clean));
+}
+
 refs.scanForm.addEventListener("submit", submitScan);
 refs.refreshHistory.addEventListener("click", () => {
   loadHistory().then(() => setStatus("History refreshed."));
@@ -207,8 +333,24 @@ refs.clearDetail.addEventListener("click", () => {
   clearDetail();
   setStatus("Detail cleared.");
 });
+refs.assistantForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const question = refs.assistantInput.value;
+  refs.assistantInput.value = "";
+  askAssistant(question);
+});
+refs.clearAssistant.addEventListener("click", () => {
+  clearAssistantMessages();
+});
+for (const chip of refs.assistChips) {
+  chip.addEventListener("click", () => {
+    const prompt = chip.dataset.ask || chip.textContent || "";
+    askAssistant(prompt);
+  });
+}
 
 clearDetail();
+clearAssistantMessages();
 loadHistory()
   .then(() => setStatus("Dashboard ready."))
   .catch((error) => setStatus(`Unable to load history: ${error.message}`, "error"));

@@ -1,0 +1,25 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shieldGrad" x1="14" y1="14" x2="114" y2="114" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#17324D"/>
+      <stop offset="1" stop-color="#2A5E6A"/>
+    </linearGradient>
+    <linearGradient id="chipGrad" x1="43" y1="41" x2="84" y2="83" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F2D167"/>
+      <stop offset="1" stop-color="#D88C2D"/>
+    </linearGradient>
+  </defs>
+  <path d="M64 10L108 26V56C108 82 89.8 106.3 64 118C38.2 106.3 20 82 20 56V26L64 10Z" fill="url(#shieldGrad)"/>
+  <rect x="42" y="40" width="44" height="44" rx="8" fill="url(#chipGrad)"/>
+  <rect x="50" y="48" width="28" height="28" rx="4" fill="#17324D"/>
+  <path d="M56 62H72" stroke="#F9FAFB" stroke-width="4" stroke-linecap="round"/>
+  <path d="M64 54V70" stroke="#F9FAFB" stroke-width="4" stroke-linecap="round"/>
+  <rect x="38" y="52" width="6" height="4" rx="2" fill="#E1E8ED"/>
+  <rect x="38" y="64" width="6" height="4" rx="2" fill="#E1E8ED"/>
+  <rect x="84" y="52" width="6" height="4" rx="2" fill="#E1E8ED"/>
+  <rect x="84" y="64" width="6" height="4" rx="2" fill="#E1E8ED"/>
+  <rect x="52" y="36" width="4" height="6" rx="2" fill="#E1E8ED"/>
+  <rect x="64" y="36" width="4" height="6" rx="2" fill="#E1E8ED"/>
+  <rect x="52" y="84" width="4" height="6" rx="2" fill="#E1E8ED"/>
+  <rect x="64" y="84" width="4" height="6" rx="2" fill="#E1E8ED"/>
+</svg>

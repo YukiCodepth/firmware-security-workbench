@@ -38,6 +38,13 @@ class ApiBackendTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/html", response.headers.get("content-type", ""))
         self.assertIn("Firmware Security Workbench", response.text)
+        self.assertIn("Dashboard Assistant", response.text)
+
+    def test_dashboard_logo_asset(self) -> None:
+        response = self.client.get("/dashboard/static/logo-fwb.svg")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("image/svg+xml", response.headers.get("content-type", ""))
+        self.assertIn("<svg", response.text)
 
     def test_scan_create_list_and_show(self) -> None:
         firmware_bytes = (
