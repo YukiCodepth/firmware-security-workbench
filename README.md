@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 9 - SBOM Generator`
+Current status: `Phase 10 - CVE Candidate Engine`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, a browser dashboard, structured secret exposure detection, YARA-compatible rules, and CycloneDX-style SBOM component candidate generation as part of `v0.7.0-dev`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, a browser dashboard, structured secret exposure detection, YARA-compatible rules, CycloneDX-style SBOM generation, and local CVE candidate mapping with confidence levels as part of `v0.7.0-dev`.
 
 ## Quick Start
 

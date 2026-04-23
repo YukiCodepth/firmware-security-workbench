@@ -9,6 +9,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .cve_engine import match_cve_candidates, summarize_cve_confidence
 from .rule_engine import DEFAULT_RULES_DIR, run_rule_engine
 
 ScannerResult = dict[str, object]
@@ -896,6 +897,7 @@ def build_sbom_snapshot(
     scanner_version: str,
     file_info: dict[str, object],
     component_candidates: list[dict[str, object]],
+    cve_candidates: list[dict[str, object]],
 ) -> dict[str, object]:
     file_name = str(file_info.get("name", "firmware-image"))
     file_sha = str(file_info.get("sha256", ""))
@@ -920,13 +922,17 @@ def build_sbom_snapshot(
         }
     ]
 
+    component_ref_map: dict[tuple[str, str], str] = {}
+
     for index, candidate in enumerate(component_candidates, start=1):
         name = str(candidate["name"])
         version = str(candidate["version"])
+        bom_ref = f"component-{index}-{_slug_component_name(name)}"
+        component_ref_map[(name.lower(), version.lower())] = bom_ref
         components.append(
             {
                 "type": str(candidate["component_type"]),
-                "bom-ref": f"component-{index}-{_slug_component_name(name)}",
+                "bom-ref": bom_ref,
                 "name": name,
                 "version": version,
                 "supplier": {"name": str(candidate["supplier"])},
@@ -938,6 +944,29 @@ def build_sbom_snapshot(
                 ],
             }
         )
+
+    vulnerabilities: list[dict[str, object]] = []
+    for candidate in cve_candidates:
+        comp_name = str(candidate.get("component_name", ""))
+        comp_version = str(candidate.get("component_version", ""))
+        bom_ref = component_ref_map.get((comp_name.lower(), comp_version.lower()))
+        entry: dict[str, object] = {
+            "id": str(candidate.get("cve_id", "UNKNOWN-CVE")),
+            "source": {
+                "name": "Firmware Security Workbench Local CVE Catalog",
+            },
+            "ratings": [
+                {
+                    "severity": str(candidate.get("severity", "unknown")),
+                    "score": float(candidate.get("cvss_base_score", 0.0)),
+                    "method": "CVSSv3",
+                }
+            ],
+            "description": str(candidate.get("summary", "")),
+        }
+        if bom_ref is not None:
+            entry["affects"] = [{"ref": bom_ref}]
+        vulnerabilities.append(entry)
 
     return {
         "bomFormat": "CycloneDX",
@@ -961,6 +990,7 @@ def build_sbom_snapshot(
             },
         },
         "components": components,
+        "vulnerabilities": vulnerabilities,
     }
 
 
@@ -1062,6 +1092,8 @@ def scan_firmware(
         }
 
     component_candidates = detect_component_candidates(strings)
+    cve_candidates = match_cve_candidates(component_candidates)
+    cve_confidence_summary = summarize_cve_confidence(cve_candidates)
     type_guess, format_details, architecture_hint = analyze_format(path, data)
     scanned_at_utc = datetime.now(timezone.utc).isoformat()
     scanner_version = "0.7.0-dev"
@@ -1080,13 +1112,14 @@ def scan_firmware(
         scanner_version=scanner_version,
         file_info=file_info,
         component_candidates=component_candidates,
+        cve_candidates=cve_candidates,
     )
 
     return {
         "scanner": {
             "name": "Firmware Security Workbench",
             "version": scanner_version,
-            "phase": "09-sbom-generator",
+            "phase": "10-cve-risk-engine",
             "scanned_at_utc": scanned_at_utc,
         },
         "file": file_info,
@@ -1110,9 +1143,13 @@ def scan_firmware(
             "rule_warnings": rule_scan["warnings"],
             "component_candidate_count": len(component_candidates),
             "component_candidates": component_candidates[:100],
+            "cve_candidate_count": len(cve_candidates),
+            "cve_candidates": cve_candidates[:100],
+            "cve_confidence_summary": cve_confidence_summary,
             "sbom_format": "CycloneDX",
             "sbom_spec_version": "1.5",
             "sbom_component_count": len(sbom["components"]),
+            "sbom_vulnerability_count": len(sbom.get("vulnerabilities", [])),
         },
         "sbom": sbom,
     }

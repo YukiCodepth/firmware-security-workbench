@@ -111,6 +111,6 @@ A phase is complete only when:
 
 ## Current Build Focus
 
-Current roadmap phase: `Phase 9 - SBOM Generator`
+Current roadmap phase: `Phase 10 - CVE Risk Engine`
 
-Next implementation phase: `Phase 10 - CVE Risk Engine`
+Next implementation phase: `Phase 11 - Firmware Diff`

@@ -289,6 +289,13 @@ function assistantReply(questionRaw) {
     "inventory",
     "cyclonedx",
   ]);
+  const asksCve = hasAny(question, [
+    "cve",
+    "cves",
+    "vulnerability",
+    "vulnerabilities",
+    "cvss",
+  ]);
   const asksRules = hasAny(question, [
     "rule",
     "rules",
@@ -302,7 +309,7 @@ function assistantReply(questionRaw) {
   const requestedSeverity = severityFromQuestion(question);
 
   if (asksHelp) {
-    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, YARA/rule matches, SBOM components, entropy, file type, and risk DNA.";
+    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, YARA/rule matches, SBOM components, CVE candidates, entropy, file type, and risk DNA.";
   }
   if ((asksHistory && asksFindings) || (asksFindings && asksHistory)) {
     if (state.scans.length === 0) {
@@ -411,6 +418,25 @@ function assistantReply(questionRaw) {
       .join("; ");
     return `SBOM candidates: ${candidateCount}. Total SBOM components: ${sbomCount}. Top candidates: ${preview}.`;
   }
+  if (asksCve) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    const count = Number(analysis.cve_candidate_count || 0);
+    if (count === 0) {
+      return "No CVE candidates matched from local catalog for selected scan.";
+    }
+    const confidence = analysis.cve_confidence_summary || {};
+    const cves = Array.isArray(analysis.cve_candidates) ? analysis.cve_candidates : [];
+    const preview = cves
+      .slice(0, 5)
+      .map(
+        (entry) =>
+          `${entry.cve_id || "UNKNOWN-CVE"} (${entry.severity || "unknown"}, ${entry.confidence || "low"})`
+      )
+      .join("; ");
+    return `CVE candidates: ${count} (high=${confidence.high || 0}, medium=${confidence.medium || 0}, low=${confidence.low || 0}). Top: ${preview}.`;
+  }
   if (asksRules) {
     if (!result) {
       return "No selected scan yet.";
@@ -462,7 +488,7 @@ function assistantReply(questionRaw) {
     return "Next: inspect highest-severity findings, verify credentials/endpoints manually, then run firmware diff against previous version.";
   }
 
-  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, yara rules, sbom components, risk dna, or next steps.";
+  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, yara rules, sbom components, cve candidates, risk dna, or next steps.";
 }
 
 async function fetchJson(url, options = {}) {
