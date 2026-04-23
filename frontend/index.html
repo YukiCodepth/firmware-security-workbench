@@ -157,6 +157,10 @@
           <button class="assist-chip" data-ask="How many scans are in history?">History count</button>
           <button class="assist-chip" data-ask="What is the most severe finding in selected scan?">Top severity</button>
           <button class="assist-chip" data-ask="Give me a summary of selected scan.">Selected summary</button>
+          <button class="assist-chip" data-ask="Show high findings only.">High findings</button>
+          <button class="assist-chip" data-ask="Any credentials in selected scan?">Credentials</button>
+          <button class="assist-chip" data-ask="Show URLs and endpoints in selected scan.">URLs/endpoints</button>
+          <button class="assist-chip" data-ask="Give risk DNA for selected scan.">Risk DNA</button>
         </div>
 
         <ul id="assistant-chat" class="assistant-chat"></ul>
@@ -165,7 +169,7 @@
           <input
             id="assistant-input"
             type="text"
-            placeholder="Ask about findings, scan history, entropy, file type..."
+            placeholder="Ask about findings, severity, credentials, URLs, risk DNA..."
             autocomplete="off"
             required
           />
