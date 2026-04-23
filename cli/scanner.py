@@ -4,6 +4,7 @@ import hashlib
 import math
 import re
 import struct
+import uuid
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -109,6 +110,65 @@ NETWORK_ENDPOINT_REGEX = re.compile(
     r"\b(?:https?:\/\/|mqtt:\/\/|ws:\/\/|wss:\/\/|ftp:\/\/)[^\s\"']+",
     re.IGNORECASE,
 )
+
+COMPONENT_REGEX_RULES: list[tuple[str, str, str, re.Pattern[str], str]] = [
+    (
+        "OpenSSL",
+        "OpenSSL Software Foundation",
+        "library",
+        re.compile(r"(?i)\bopenssl(?:\s+|/|_)?v?(?P<version>\d+\.\d+(?:\.\d+)?[a-z]?)\b"),
+        "high",
+    ),
+    (
+        "mbedTLS",
+        "Mbed TLS Team",
+        "library",
+        re.compile(r"(?i)\bmbedtls(?:\s+|/|_)?v?(?P<version>\d+\.\d+(?:\.\d+)?)\b"),
+        "high",
+    ),
+    (
+        "wolfSSL",
+        "wolfSSL Inc.",
+        "library",
+        re.compile(r"(?i)\bwolfssl(?:\s+|/|_)?v?(?P<version>\d+\.\d+(?:\.\d+)?)\b"),
+        "high",
+    ),
+    (
+        "BusyBox",
+        "BusyBox",
+        "application",
+        re.compile(r"(?i)\bbusybox(?:\s+v?)?(?P<version>\d+\.\d+(?:\.\d+)?)\b"),
+        "high",
+    ),
+    (
+        "U-Boot",
+        "DENX",
+        "application",
+        re.compile(r"(?i)\bu-boot(?:\s+|[-_])v?(?P<version>\d{4}\.\d{2}|\d+\.\d+(?:\.\d+)?)\b"),
+        "medium",
+    ),
+    (
+        "Linux Kernel",
+        "Linux Foundation",
+        "operating-system",
+        re.compile(r"(?i)\blinux\s+version\s+(?P<version>\d+\.\d+(?:\.\d+)?)\b"),
+        "medium",
+    ),
+    (
+        "zlib",
+        "zlib",
+        "library",
+        re.compile(r"(?i)\bzlib(?:\s+|/|_)?v?(?P<version>\d+\.\d+(?:\.\d+)?)\b"),
+        "medium",
+    ),
+    (
+        "musl libc",
+        "musl",
+        "library",
+        re.compile(r"(?i)\bmusl(?:\s+libc)?(?:\s+|/|_)?v?(?P<version>\d+\.\d+(?:\.\d+)?)\b"),
+        "medium",
+    ),
+]
 
 
 class ScanError(Exception):
@@ -770,6 +830,140 @@ def summarize_security_posture(
     }
 
 
+def _slug_component_name(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9.+_-]+", "-", name.lower()).strip("-")
+    return slug or "component"
+
+
+def _candidate_purl(name: str, version: str) -> str:
+    return f"pkg:generic/{_slug_component_name(name)}@{version}"
+
+
+def detect_component_candidates(
+    extracted_strings: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    candidates: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for item in extracted_strings:
+        raw_value = item.get("value")
+        raw_offset = item.get("offset")
+        if not isinstance(raw_value, str) or not isinstance(raw_offset, int):
+            continue
+
+        for component_name, supplier, component_type, pattern, confidence in COMPONENT_REGEX_RULES:
+            match = pattern.search(raw_value)
+            if not match:
+                continue
+            version = match.groupdict().get("version")
+            if not isinstance(version, str) or not version:
+                continue
+
+            key = (component_name.lower(), version.lower())
+            if key in seen:
+                continue
+            seen.add(key)
+
+            evidence = raw_value[:220]
+            candidates.append(
+                {
+                    "name": component_name,
+                    "version": version,
+                    "supplier": supplier,
+                    "component_type": component_type,
+                    "confidence": confidence,
+                    "offset": raw_offset,
+                    "offset_hex": hex(raw_offset),
+                    "evidence": evidence,
+                    "purl": _candidate_purl(component_name, version),
+                }
+            )
+
+    candidates.sort(
+        key=lambda item: (
+            CONFIDENCE_RANK.get(str(item["confidence"]), 0),
+            str(item["name"]).lower(),
+            str(item["version"]).lower(),
+        ),
+        reverse=True,
+    )
+    return candidates
+
+
+def build_sbom_snapshot(
+    *,
+    scanned_at_utc: str,
+    scanner_version: str,
+    file_info: dict[str, object],
+    component_candidates: list[dict[str, object]],
+) -> dict[str, object]:
+    file_name = str(file_info.get("name", "firmware-image"))
+    file_sha = str(file_info.get("sha256", ""))
+    serial_seed = file_sha if file_sha else file_name
+    serial_number = f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, serial_seed)}"
+
+    components: list[dict[str, object]] = [
+        {
+            "type": "firmware",
+            "bom-ref": "firmware-root",
+            "name": file_name,
+            "version": f"sha256:{file_sha[:12]}" if file_sha else "unknown",
+            "hashes": (
+                [{"alg": "SHA-256", "content": file_sha}]
+                if file_sha
+                else []
+            ),
+            "properties": [
+                {"name": "fwb:type_guess", "value": str(file_info.get("type_guess", "-"))},
+                {"name": "fwb:size_bytes", "value": str(file_info.get("size_bytes", "-"))},
+            ],
+        }
+    ]
+
+    for index, candidate in enumerate(component_candidates, start=1):
+        name = str(candidate["name"])
+        version = str(candidate["version"])
+        components.append(
+            {
+                "type": str(candidate["component_type"]),
+                "bom-ref": f"component-{index}-{_slug_component_name(name)}",
+                "name": name,
+                "version": version,
+                "supplier": {"name": str(candidate["supplier"])},
+                "purl": str(candidate["purl"]),
+                "properties": [
+                    {"name": "fwb:confidence", "value": str(candidate["confidence"])},
+                    {"name": "fwb:evidence_offset_hex", "value": str(candidate["offset_hex"])},
+                    {"name": "fwb:evidence", "value": str(candidate["evidence"])},
+                ],
+            }
+        )
+
+    return {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.5",
+        "serialNumber": serial_number,
+        "version": 1,
+        "metadata": {
+            "timestamp": scanned_at_utc,
+            "tools": {
+                "components": [
+                    {
+                        "type": "application",
+                        "name": "Firmware Security Workbench",
+                        "version": scanner_version,
+                    }
+                ]
+            },
+            "component": {
+                "type": "firmware",
+                "name": file_name,
+            },
+        },
+        "components": components,
+    }
+
+
 def detect_suspicious_strings(
     extracted_strings: list[dict[str, object]],
 ) -> list[dict[str, object]]:
@@ -866,25 +1060,36 @@ def scan_firmware(
             "rule_matches": [],
             "warnings": [],
         }
+
+    component_candidates = detect_component_candidates(strings)
     type_guess, format_details, architecture_hint = analyze_format(path, data)
+    scanned_at_utc = datetime.now(timezone.utc).isoformat()
+    scanner_version = "0.7.0-dev"
+    file_info = {
+        "path": str(path.resolve()),
+        "name": path.name,
+        "extension": path.suffix.lower() or None,
+        "size_bytes": len(data),
+        "sha256": sha256_hex(data),
+        "type_guess": type_guess,
+        "architecture_hint": architecture_hint,
+        "format_details": format_details,
+    }
+    sbom = build_sbom_snapshot(
+        scanned_at_utc=scanned_at_utc,
+        scanner_version=scanner_version,
+        file_info=file_info,
+        component_candidates=component_candidates,
+    )
 
     return {
         "scanner": {
             "name": "Firmware Security Workbench",
-            "version": "0.6.0-dev",
-            "phase": "08-yara-engine",
-            "scanned_at_utc": datetime.now(timezone.utc).isoformat(),
+            "version": scanner_version,
+            "phase": "09-sbom-generator",
+            "scanned_at_utc": scanned_at_utc,
         },
-        "file": {
-            "path": str(path.resolve()),
-            "name": path.name,
-            "extension": path.suffix.lower() or None,
-            "size_bytes": len(data),
-            "sha256": sha256_hex(data),
-            "type_guess": type_guess,
-            "architecture_hint": architecture_hint,
-            "format_details": format_details,
-        },
+        "file": file_info,
         "analysis": {
             "entropy": shannon_entropy(data),
             "strings_count": len(strings),
@@ -903,5 +1108,11 @@ def scan_firmware(
             "rule_match_count": len(rule_scan["rule_matches"]),
             "rule_matches": rule_scan["rule_matches"][:50],
             "rule_warnings": rule_scan["warnings"],
+            "component_candidate_count": len(component_candidates),
+            "component_candidates": component_candidates[:100],
+            "sbom_format": "CycloneDX",
+            "sbom_spec_version": "1.5",
+            "sbom_component_count": len(sbom["components"]),
         },
+        "sbom": sbom,
     }

@@ -54,10 +54,37 @@ class ScannerCoreTests(unittest.TestCase):
             self.assertIn("rule_engine", result["analysis"])
             self.assertIn("rule_match_count", result["analysis"])
             self.assertGreater(result["analysis"]["rule_match_count"], 0)
+            self.assertIn("component_candidate_count", result["analysis"])
+            self.assertIn("sbom", result)
+            self.assertIn("components", result["sbom"])
 
             exposures = result["analysis"]["secret_exposures"]
             redacted_text = " ".join(item["evidence_redacted"] for item in exposures)
             self.assertNotIn("demo1234", redacted_text)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    def test_component_candidates_and_sbom_snapshot(self) -> None:
+        payload = (
+            b"openssl 1.1.1k\n"
+            b"busybox v1.36.1\n"
+            b"zlib 1.2.11\n"
+            b"linux version 5.10.1\n"
+        )
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as temp_file:
+            temp_file.write(payload)
+            temp_path = Path(temp_file.name)
+
+        try:
+            result = scan_firmware(temp_path, enable_rules=False)
+            self.assertGreaterEqual(result["analysis"]["component_candidate_count"], 3)
+            names = {item["name"] for item in result["analysis"]["component_candidates"]}
+            self.assertTrue({"OpenSSL", "BusyBox", "zlib"}.issubset(names))
+
+            sbom = result["sbom"]
+            self.assertEqual(sbom["bomFormat"], "CycloneDX")
+            self.assertEqual(sbom["specVersion"], "1.5")
+            self.assertGreaterEqual(len(sbom["components"]), 4)
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -232,7 +259,38 @@ class ScannerCliTests(unittest.TestCase):
         self.assertIn("suspicious_findings", payload["analysis"])
         self.assertIn("format_details", payload["file"])
         self.assertIn("rule_match_count", payload["analysis"])
+        self.assertIn("component_candidate_count", payload["analysis"])
+        self.assertIn("sbom", payload)
         self.assertIn("storage", payload)
+
+    def test_cli_scan_writes_sbom_file(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        firmware_path = repo_root / "samples" / "demo-firmware.bin"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sbom_path = Path(temp_dir) / "scan.sbom.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "cli",
+                    "scan",
+                    str(firmware_path),
+                    "--no-save",
+                    "--sbom-out",
+                    str(sbom_path),
+                ],
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            self.assertTrue(sbom_path.exists())
+            sbom_payload = json.loads(sbom_path.read_text(encoding="utf-8"))
+            self.assertEqual(sbom_payload["bomFormat"], "CycloneDX")
+            self.assertIn("components", sbom_payload)
 
     def test_cli_history_list_and_show(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

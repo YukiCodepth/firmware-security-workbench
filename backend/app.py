@@ -55,7 +55,7 @@ def _scan_uploaded_file(
 
 app = FastAPI(
     title="Firmware Security Workbench API",
-    version="0.6.0-dev",
+    version="0.7.0-dev",
     description="Local API for firmware scanning and scan history",
 )
 
@@ -70,7 +70,7 @@ def root() -> dict[str, object]:
     return {
         "service": "Firmware Security Workbench API",
         "status": "ok",
-        "version": "0.6.0-dev",
+        "version": "0.7.0-dev",
         "docs_url": "/docs",
         "health_url": "/health",
         "api_base": "/api/v1",
@@ -89,7 +89,7 @@ def dashboard() -> FileResponse:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "fwb-api", "version": "0.6.0-dev"}
+    return {"status": "ok", "service": "fwb-api", "version": "0.7.0-dev"}
 
 
 @app.post("/api/v1/scans")

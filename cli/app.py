@@ -33,6 +33,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional output file path for JSON result",
     )
     scan_parser.add_argument(
+        "--sbom-out",
+        type=Path,
+        help="Optional output file path for CycloneDX SBOM JSON",
+    )
+    scan_parser.add_argument(
         "--min-string-length",
         type=int,
         default=4,
@@ -130,6 +135,7 @@ def _print_summary(result: dict[str, object]) -> None:
     endpoints = analysis.get("endpoints_preview", [])[:8]
     posture = analysis.get("security_posture", {})
     rule_matches = analysis.get("rule_matches", [])[:6]
+    component_candidates = analysis.get("component_candidates", [])[:8]
     format_details = file_info.get("format_details", {})
 
     print("Firmware Security Workbench Scan")
@@ -148,6 +154,10 @@ def _print_summary(result: dict[str, object]) -> None:
     print(f"Suspicious findings: {analysis['suspicious_count']}")
     print(f"Secret exposures: {analysis.get('secret_exposure_count', 0)}")
     print(f"Network endpoints: {analysis.get('endpoint_count', 0)}")
+    print(
+        f"SBOM candidates: {analysis.get('component_candidate_count', 0)} "
+        f"(sbom components={analysis.get('sbom_component_count', 0)})"
+    )
     print(
         f"Rules engine: {analysis.get('rule_engine', '-')} "
         f"(loaded={analysis.get('rules_loaded', 0)}, matches={analysis.get('rule_match_count', 0)})"
@@ -192,6 +202,14 @@ def _print_summary(result: dict[str, object]) -> None:
                 f"tags={','.join(match.get('tags', []))}"
             )
 
+    if component_candidates:
+        print("\nTop SBOM candidates:")
+        for candidate in component_candidates:
+            print(
+                f"- [{candidate.get('confidence', 'low')}] "
+                f"{candidate.get('name', 'unknown')} {candidate.get('version', '?')}"
+            )
+
 
 def run_scan_command(args: argparse.Namespace) -> int:
     try:
@@ -228,6 +246,9 @@ def run_scan_command(args: argparse.Namespace) -> int:
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    if args.sbom_out:
+        args.sbom_out.parent.mkdir(parents=True, exist_ok=True)
+        args.sbom_out.write_text(json.dumps(result["sbom"], indent=2), encoding="utf-8")
 
     if args.json:
         print(json.dumps(result, indent=2))
@@ -239,6 +260,8 @@ def run_scan_command(args: argparse.Namespace) -> int:
             print(f"Scan was not saved (--no-save). Target db: {args.db}")
         if args.out:
             print(f"\nSaved JSON result: {args.out}")
+        if args.sbom_out:
+            print(f"Saved SBOM JSON: {args.sbom_out}")
 
     return 0
 
