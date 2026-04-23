@@ -57,6 +57,7 @@ class ScannerCoreTests(unittest.TestCase):
             self.assertIn("component_candidate_count", result["analysis"])
             self.assertIn("cve_candidate_count", result["analysis"])
             self.assertIn("cve_candidates", result["analysis"])
+            self.assertIn("risk_dna", result["analysis"])
             self.assertIn("sbom", result)
             self.assertIn("components", result["sbom"])
 
@@ -300,6 +301,91 @@ class ScannerCliTests(unittest.TestCase):
             self.assertEqual(sbom_payload["bomFormat"], "CycloneDX")
             self.assertIn("components", sbom_payload)
             self.assertIn("vulnerabilities", sbom_payload)
+
+    def test_cli_diff_json_output(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as old_file:
+            old_file.write(b"FWA\npassword=abc\n")
+            old_path = Path(old_file.name)
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as new_file:
+            new_file.write(b"FWB\npassword=abc\nadmin=true\n")
+            new_path = Path(new_file.name)
+
+        try:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "cli",
+                    "diff",
+                    str(old_path),
+                    str(new_path),
+                    "--json",
+                ],
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            payload = json.loads(completed.stdout)
+            self.assertIn("diff", payload)
+            self.assertIn("risk_shift", payload["diff"])
+        finally:
+            old_path.unlink(missing_ok=True)
+            new_path.unlink(missing_ok=True)
+
+    def test_cli_report_render_from_scan_json(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        firmware_path = repo_root / "samples" / "demo-firmware.bin"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            scan_json = Path(temp_dir) / "scan.json"
+            report_md = Path(temp_dir) / "scan.md"
+
+            scan_run = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "cli",
+                    "scan",
+                    str(firmware_path),
+                    "--json",
+                    "--no-save",
+                    "--out",
+                    str(scan_json),
+                ],
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(scan_run.returncode, 0, msg=scan_run.stderr)
+
+            render_run = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "cli",
+                    "report",
+                    str(scan_json),
+                    "--kind",
+                    "scan",
+                    "--format",
+                    "markdown",
+                    "--out",
+                    str(report_md),
+                ],
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(render_run.returncode, 0, msg=render_run.stderr)
+            self.assertTrue(report_md.exists())
+            text = report_md.read_text(encoding="utf-8")
+            self.assertIn("Firmware Security Report", text)
+            self.assertIn("CVE candidates", text)
 
     def test_cli_history_list_and_show(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

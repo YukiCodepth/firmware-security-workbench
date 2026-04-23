@@ -123,6 +123,24 @@ class ApiBackendTests(unittest.TestCase):
         listed = list_response.json()
         self.assertEqual(listed["count"], 0)
 
+    def test_diff_endpoint(self) -> None:
+        old_bytes = b"FW_V1\npassword=demo123\nmqtt://broker.local\n"
+        new_bytes = b"FW_V2\npassword=demo123\nmqtt://broker.local\nadmin=true\n"
+        files = {
+            "old_file": ("fw-old.bin", old_bytes, "application/octet-stream"),
+            "new_file": ("fw-new.bin", new_bytes, "application/octet-stream"),
+        }
+        data = {"min_string_length": "4", "max_strings": "2000"}
+
+        response = self.client.post("/api/v1/diff", files=files, data=data)
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("old_scan", payload)
+        self.assertIn("new_scan", payload)
+        self.assertIn("diff", payload)
+        self.assertTrue(payload["diff"]["summary"]["changed"])
+        self.assertIn("risk_shift", payload["diff"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,9 +5,13 @@ import json
 import sys
 from pathlib import Path
 
+from .diff_engine import scan_and_diff_firmware
+from .report_exporter import export_diff_report, export_scan_report
 from .rule_engine import DEFAULT_RULES_DIR
 from .scanner import ScanError, scan_firmware
 from .storage import DEFAULT_DB_PATH, get_scan_record, list_scans, save_scan_result
+
+REPORT_FORMAT_CHOICES = ("json", "markdown", "md", "html")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +40,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--sbom-out",
         type=Path,
         help="Optional output file path for CycloneDX SBOM JSON",
+    )
+    scan_parser.add_argument(
+        "--report-format",
+        choices=REPORT_FORMAT_CHOICES,
+        help="Optional report format export for this scan",
+    )
+    scan_parser.add_argument(
+        "--report-out",
+        type=Path,
+        help="Optional report output path for this scan",
     )
     scan_parser.add_argument(
         "--min-string-length",
@@ -124,6 +138,78 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print full JSON output",
     )
+
+    diff_parser = subparsers.add_parser(
+        "diff",
+        help="Scan and compare two firmware files",
+    )
+    diff_parser.add_argument("old_file", help="Older or baseline firmware file path")
+    diff_parser.add_argument("new_file", help="Newer firmware file path")
+    diff_parser.add_argument("--json", action="store_true", help="Print full JSON output")
+    diff_parser.add_argument("--out", type=Path, help="Optional output file path for JSON diff")
+    diff_parser.add_argument(
+        "--report-format",
+        choices=REPORT_FORMAT_CHOICES,
+        help="Optional report format export for this diff",
+    )
+    diff_parser.add_argument(
+        "--report-out",
+        type=Path,
+        help="Optional report output path for this diff",
+    )
+    diff_parser.add_argument(
+        "--min-string-length",
+        type=int,
+        default=4,
+        help="Minimum printable string length (default: 4)",
+    )
+    diff_parser.add_argument(
+        "--max-strings",
+        type=int,
+        default=2000,
+        help="Maximum extracted strings before truncation (default: 2000)",
+    )
+    diff_parser.add_argument(
+        "--no-rules",
+        action="store_true",
+        help="Disable YARA/rules-engine scanning for both files",
+    )
+    diff_parser.add_argument(
+        "--rules-dir",
+        type=Path,
+        default=DEFAULT_RULES_DIR,
+        help=f"Directory containing YARA rule files (default: {DEFAULT_RULES_DIR})",
+    )
+    diff_parser.add_argument(
+        "--rules-file",
+        type=Path,
+        action="append",
+        help="Additional YARA rule file path. Can be passed multiple times.",
+    )
+
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Render a report from existing scan/diff JSON",
+    )
+    report_parser.add_argument("input", type=Path, help="Input JSON file path")
+    report_parser.add_argument(
+        "--kind",
+        choices=("scan", "diff"),
+        required=True,
+        help="Input JSON kind",
+    )
+    report_parser.add_argument(
+        "--format",
+        choices=REPORT_FORMAT_CHOICES,
+        required=True,
+        help="Report format to render",
+    )
+    report_parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Output path for rendered report",
+    )
     return parser
 
 
@@ -172,6 +258,12 @@ def _print_summary(result: dict[str, object]) -> None:
         print(
             f"Security posture: {posture.get('risk_level', '-')}"
             f" (score {posture.get('score', '-')}, top severity {posture.get('top_severity', '-')})"
+        )
+    risk_dna = analysis.get("risk_dna", {})
+    if isinstance(risk_dna, dict) and risk_dna:
+        print(
+            f"Risk DNA: {risk_dna.get('band', '-')}"
+            f" (score {risk_dna.get('score', '-')}, fingerprint {risk_dna.get('fingerprint', '-')})"
         )
 
     if not findings:
@@ -226,6 +318,70 @@ def _print_summary(result: dict[str, object]) -> None:
             )
 
 
+def _print_diff_summary(diff_payload: dict[str, object]) -> None:
+    diff = diff_payload.get("diff", {})
+    if not isinstance(diff, dict):
+        print("Invalid diff payload.", file=sys.stderr)
+        return
+
+    summary = diff.get("summary", {})
+    delta = diff.get("delta", {})
+    risk_shift = diff.get("risk_shift", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    if not isinstance(delta, dict):
+        delta = {}
+    if not isinstance(risk_shift, dict):
+        risk_shift = {}
+
+    print("Firmware Security Workbench Diff")
+    print("--------------------------------")
+    print(f"Old file: {summary.get('old_file', 'old')}")
+    print(f"New file: {summary.get('new_file', 'new')}")
+    print(f"Changed: {summary.get('changed', False)}")
+    print(
+        "Delta: "
+        f"suspicious={delta.get('suspicious', 0)}, "
+        f"secrets={delta.get('secrets', 0)}, "
+        f"endpoints={delta.get('endpoints', 0)}, "
+        f"rules={delta.get('rules', 0)}, "
+        f"components={delta.get('components', 0)}, "
+        f"cves={delta.get('cves', 0)}"
+    )
+    print(
+        "Risk shift: "
+        f"trend={risk_shift.get('trend', 'risk_stable')}, "
+        f"score_delta={risk_shift.get('score_delta', 0)}, "
+        f"{risk_shift.get('old_band', '-')} -> {risk_shift.get('new_band', '-')}"
+    )
+
+
+def _export_scan_report_if_requested(
+    result: dict[str, object],
+    *,
+    report_format: str | None,
+    report_out: Path | None,
+) -> Path | None:
+    if report_format is None and report_out is None:
+        return None
+    if report_format is None or report_out is None:
+        raise ValueError("Both --report-format and --report-out are required together.")
+    return export_scan_report(result, report_format=report_format, output_path=report_out)
+
+
+def _export_diff_report_if_requested(
+    diff_payload: dict[str, object],
+    *,
+    report_format: str | None,
+    report_out: Path | None,
+) -> Path | None:
+    if report_format is None and report_out is None:
+        return None
+    if report_format is None or report_out is None:
+        raise ValueError("Both --report-format and --report-out are required together.")
+    return export_diff_report(diff_payload, report_format=report_format, output_path=report_out)
+
+
 def run_scan_command(args: argparse.Namespace) -> int:
     try:
         result = scan_firmware(
@@ -265,6 +421,16 @@ def run_scan_command(args: argparse.Namespace) -> int:
         args.sbom_out.parent.mkdir(parents=True, exist_ok=True)
         args.sbom_out.write_text(json.dumps(result["sbom"], indent=2), encoding="utf-8")
 
+    try:
+        report_path = _export_scan_report_if_requested(
+            result,
+            report_format=args.report_format,
+            report_out=args.report_out,
+        )
+    except ValueError as exc:
+        print(f"Invalid argument: {exc}", file=sys.stderr)
+        return 2
+
     if args.json:
         print(json.dumps(result, indent=2))
     else:
@@ -277,7 +443,83 @@ def run_scan_command(args: argparse.Namespace) -> int:
             print(f"\nSaved JSON result: {args.out}")
         if args.sbom_out:
             print(f"Saved SBOM JSON: {args.sbom_out}")
+        if report_path is not None:
+            print(f"Saved report: {report_path}")
 
+    return 0
+
+
+def run_diff_command(args: argparse.Namespace) -> int:
+    try:
+        payload = scan_and_diff_firmware(
+            args.old_file,
+            args.new_file,
+            min_string_length=args.min_string_length,
+            max_strings=args.max_strings,
+            enable_rules=not args.no_rules,
+            rules_dir=args.rules_dir,
+            rule_paths=args.rules_file,
+        )
+    except ScanError as exc:
+        print(f"Diff failed: {exc}", file=sys.stderr)
+        return 2
+    except ValueError as exc:
+        print(f"Invalid argument: {exc}", file=sys.stderr)
+        return 2
+
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    try:
+        report_path = _export_diff_report_if_requested(
+            payload,
+            report_format=args.report_format,
+            report_out=args.report_out,
+        )
+    except ValueError as exc:
+        print(f"Invalid argument: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(payload, indent=2))
+    else:
+        _print_diff_summary(payload)
+        if args.out:
+            print(f"Saved JSON diff: {args.out}")
+        if report_path is not None:
+            print(f"Saved report: {report_path}")
+    return 0
+
+
+def run_report_render_command(args: argparse.Namespace) -> int:
+    try:
+        payload = json.loads(args.input.read_text(encoding="utf-8"))
+    except OSError as exc:
+        print(f"Unable to read input report source: {exc}", file=sys.stderr)
+        return 2
+    except json.JSONDecodeError as exc:
+        print(f"Input is not valid JSON: {exc}", file=sys.stderr)
+        return 2
+
+    try:
+        if args.kind == "scan":
+            output = export_scan_report(
+                payload,
+                report_format=args.format,
+                output_path=args.out,
+            )
+        else:
+            output = export_diff_report(
+                payload,
+                report_format=args.format,
+                output_path=args.out,
+            )
+    except ValueError as exc:
+        print(f"Invalid argument: {exc}", file=sys.stderr)
+        return 2
+
+    print(f"Saved report: {output}")
     return 0
 
 
@@ -328,6 +570,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scan":
         return run_scan_command(args)
+    if args.command == "diff":
+        return run_diff_command(args)
+    if args.command == "report":
+        return run_report_render_command(args)
     if args.command == "history":
         if args.history_command == "list":
             return run_history_list_command(args)

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "firmware-security-workbench"
+version = "1.0.0"
+description = "Firmware Security Workbench defensive firmware analysis toolkit"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  {name = "Firmware Security Workbench Contributors"}
+]
+dependencies = [
+  "fastapi>=0.110.0",
+  "uvicorn>=0.25.0",
+  "python-multipart>=0.0.9",
+]
+
+[project.scripts]
+fwb = "cli.app:main"
+
+[tool.setuptools]
+packages = ["backend", "cli"]

@@ -1,0 +1,8 @@
+FWB_SAMPLE_PICO2_VULN
+board=rp2350
+musl libc 1.2.2
+zlib 1.2.11
+token=pico2-lab-token
+mqtt://pico2-mesh.local:1883
+ota_update_url=http://pico2-updates.local/fw.bin
+DEBUG: boot step 3
