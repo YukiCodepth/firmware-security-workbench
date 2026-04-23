@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 10 - CVE Candidate Engine`
+Current status: `Phase 16 - Final Showcase`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, a browser dashboard, structured secret exposure detection, YARA-compatible rules, CycloneDX-style SBOM generation, and local CVE candidate mapping with confidence levels as part of `v0.7.0-dev`.
+The project now includes the full roadmap feature set through `v1.0.0`: format-aware scanning, local history + API + dashboard, rules engine, SBOM generation, CVE candidate mapping, firmware diffing, Risk DNA, report export, sample corpus, Docker packaging, and CI automation.
 
 ## Quick Start
 
@@ -103,10 +103,28 @@ Write CycloneDX SBOM JSON:
 ./scripts/fwb scan samples/demo-firmware.bin --sbom-out reports/generated/demo-sbom.json
 ```
 
+Compare two firmware images:
+
+```bash
+./scripts/fwb diff samples/corpus/esp32-lab-vuln.bin samples/corpus/stm32-lab-vuln.bin --json --out reports/generated/esp32-vs-stm32.diff.json
+```
+
+Render report from saved JSON:
+
+```bash
+./scripts/fwb report reports/generated/esp32-vs-stm32.diff.json --kind diff --format html --out reports/generated/esp32-vs-stm32.diff.html
+```
+
 Write JSON report to disk:
 
 ```bash
 ./scripts/fwb scan samples/demo-firmware.bin --out reports/generated/demo-scan.json
+```
+
+Run full showcase script:
+
+```bash
+./scripts/demo-showcase.sh
 ```
 
 List saved scan history:
@@ -133,6 +151,13 @@ Run API server:
 uvicorn backend.app:app --reload --port 8000
 ```
 
+Run with Docker:
+
+```bash
+docker build -t fwb:latest .
+docker run --rm -p 8000:8000 fwb:latest
+```
+
 API docs:
 
 ```text
@@ -155,7 +180,9 @@ This project is for defensive firmware analysis, developer education, and securi
 backend/          FastAPI backend
 cli/              Command-line scanner
 docs/             Project docs, architecture, learning notes
-frontend/         Dashboard UI (Phase 6 alpha)
+frontend/         Dashboard UI
+.github/          CI workflow
+Dockerfile        Container packaging
 reports/          Report templates and generated report output
 rules/            Detection rules, including YARA rules
 samples/          Safe sample firmware and test fixtures

@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .cve_engine import match_cve_candidates, summarize_cve_confidence
+from .risk_dna import build_risk_dna
 from .rule_engine import DEFAULT_RULES_DIR, run_rule_engine
 
 ScannerResult = dict[str, object]
@@ -1096,7 +1097,7 @@ def scan_firmware(
     cve_confidence_summary = summarize_cve_confidence(cve_candidates)
     type_guess, format_details, architecture_hint = analyze_format(path, data)
     scanned_at_utc = datetime.now(timezone.utc).isoformat()
-    scanner_version = "0.7.0-dev"
+    scanner_version = "1.0.0"
     file_info = {
         "path": str(path.resolve()),
         "name": path.name,
@@ -1113,6 +1114,20 @@ def scan_firmware(
         file_info=file_info,
         component_candidates=component_candidates,
         cve_candidates=cve_candidates,
+    )
+    risk_dna = build_risk_dna(
+        {
+            "file": file_info,
+            "analysis": {
+                "suspicious_count": len(suspicious_findings),
+                "secret_exposure_count": len(secret_exposures),
+                "endpoint_count": len(endpoints),
+                "rule_match_count": len(rule_scan["rule_matches"]),
+                "component_candidate_count": len(component_candidates),
+                "cve_candidate_count": len(cve_candidates),
+                "entropy": shannon_entropy(data),
+            },
+        }
     )
 
     return {
@@ -1150,6 +1165,7 @@ def scan_firmware(
             "sbom_spec_version": "1.5",
             "sbom_component_count": len(sbom["components"]),
             "sbom_vulnerability_count": len(sbom.get("vulnerabilities", [])),
+            "risk_dna": risk_dna,
         },
         "sbom": sbom,
     }

@@ -1,0 +1,8 @@
+FWB_SAMPLE_ARDUINO_VULN
+board=arduino-mega
+wolfssl 5.4.0
+u-boot 2020.04
+linux version 5.10.1
+secret=arduino-token-123
+http://arduino-lab.local/update
+DEBUG: serial monitor enabled

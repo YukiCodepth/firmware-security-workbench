@@ -1,0 +1,8 @@
+FWB_SAMPLE_STM32_VULN
+chip=stm32f407
+rtos=freertos
+mbedtls 2.16.9
+busybox v1.34.1
+api_key=STM32-EXAMPLE-KEY-001
+http://stm32-maint.local/api
+admin_shell_enabled=true

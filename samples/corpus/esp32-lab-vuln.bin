@@ -1,0 +1,9 @@
+FWB_SAMPLE_ESP32_VULN
+chip=esp32
+sdk=esp-idf v4.4.3
+openssl 1.1.1k
+wifi_ssid=lab-network
+wifi_password=esp32-demo-pass
+mqtt://esp32-broker.local:1883
+ota_update_url=http://esp32-updates.local/fw.bin
+DEBUG: wifi reconnect

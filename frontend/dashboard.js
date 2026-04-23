@@ -175,6 +175,10 @@ function extractUrls(result, findings) {
 
 function buildRiskDna(result, findings) {
   const analysis = result?.analysis || {};
+  const dna = analysis.risk_dna;
+  if (dna && typeof dna === "object") {
+    return `Risk DNA ${dna.band || "-"} score=${dna.score || "-"} fingerprint=${dna.fingerprint || "-"}`;
+  }
   const posture = analysis.security_posture;
   if (posture && typeof posture === "object") {
     const top = String(posture.top_severity || "-");
