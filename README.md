@@ -26,6 +26,7 @@ Firmware security tools are often either very advanced research tools or small c
 - Possible CVE matching with confidence levels
 - Firmware version diffing
 - Firmware Risk DNA profile
+- Hardening Simulator with what-if security action planning
 - HTML, Markdown, and JSON reports
 - Sample vulnerable firmware corpus for demos
 
@@ -61,9 +62,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 16 - Final Showcase`
+Current status: `Phase 17 - Hardening Simulator`
 
-The project now includes the full roadmap feature set through `v1.0.0`: format-aware scanning, local history + API + dashboard, rules engine, SBOM generation, CVE candidate mapping, firmware diffing, Risk DNA, report export, sample corpus, Docker packaging, and CI automation.
+The project includes the full roadmap feature set through `v1.0.0` and an innovation extension: Hardening Simulator for prioritized remediation actions and projected risk reduction scenarios.
 
 ## Quick Start
 

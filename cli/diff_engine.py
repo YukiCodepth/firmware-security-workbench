@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .hardening_simulator import diff_hardening_simulation
 from .risk_dna import build_risk_dna, diff_risk_dna
 from .scanner import scan_firmware
 
@@ -67,6 +68,12 @@ def diff_scan_results(
     new_components = list(new_analysis.get("component_candidates", []))
     old_cves = list(old_analysis.get("cve_candidates", []))
     new_cves = list(new_analysis.get("cve_candidates", []))
+    old_hardening = old_analysis.get("hardening_simulation", {})
+    new_hardening = new_analysis.get("hardening_simulation", {})
+    if not isinstance(old_hardening, dict):
+        old_hardening = {}
+    if not isinstance(new_hardening, dict):
+        new_hardening = {}
 
     old_dna = (
         old_analysis.get("risk_dna")
@@ -79,6 +86,7 @@ def diff_scan_results(
         else build_risk_dna(new_result)
     )
     risk_shift = diff_risk_dna(old_dna, new_dna)
+    hardening_shift = diff_hardening_simulation(old_hardening, new_hardening)
 
     findings_diff = _diff_list(old_findings, new_findings, key_fn=_key_findings)
     secrets_diff = _diff_list(old_secrets, new_secrets, key_fn=_key_secrets)
@@ -151,6 +159,7 @@ def diff_scan_results(
             - int(old_analysis.get("cve_candidate_count", 0)),
         },
         "risk_shift": risk_shift,
+        "hardening_shift": hardening_shift,
         "changes": {
             "suspicious_findings": findings_diff,
             "secret_exposures": secrets_diff,

@@ -58,6 +58,9 @@ class ScannerCoreTests(unittest.TestCase):
             self.assertIn("cve_candidate_count", result["analysis"])
             self.assertIn("cve_candidates", result["analysis"])
             self.assertIn("risk_dna", result["analysis"])
+            self.assertIn("hardening_simulation", result["analysis"])
+            self.assertIn("hardening_actions_count", result["analysis"])
+            self.assertGreaterEqual(result["analysis"]["hardening_actions_count"], 1)
             self.assertIn("sbom", result)
             self.assertIn("components", result["sbom"])
 
@@ -331,6 +334,7 @@ class ScannerCliTests(unittest.TestCase):
             payload = json.loads(completed.stdout)
             self.assertIn("diff", payload)
             self.assertIn("risk_shift", payload["diff"])
+            self.assertIn("hardening_shift", payload["diff"])
         finally:
             old_path.unlink(missing_ok=True)
             new_path.unlink(missing_ok=True)
@@ -386,6 +390,7 @@ class ScannerCliTests(unittest.TestCase):
             text = report_md.read_text(encoding="utf-8")
             self.assertIn("Firmware Security Report", text)
             self.assertIn("CVE candidates", text)
+            self.assertIn("Hardening Simulator", text)
 
     def test_cli_history_list_and_show(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

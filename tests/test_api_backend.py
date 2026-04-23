@@ -43,6 +43,7 @@ class ApiBackendTests(unittest.TestCase):
         self.assertIn("YARA matches", response.text)
         self.assertIn("SBOM", response.text)
         self.assertIn("CVE candidates", response.text)
+        self.assertIn("Hardening plan", response.text)
 
     def test_dashboard_logo_asset(self) -> None:
         response = self.client.get("/dashboard/static/logo-fwb.svg")
@@ -74,6 +75,8 @@ class ApiBackendTests(unittest.TestCase):
         self.assertIn("rule_match_count", created["analysis"])
         self.assertIn("component_candidate_count", created["analysis"])
         self.assertIn("cve_candidate_count", created["analysis"])
+        self.assertIn("hardening_simulation", created["analysis"])
+        self.assertIn("hardening_actions_count", created["analysis"])
         self.assertIn("sbom", created)
         scan_id = created["storage"]["scan_id"]
         self.assertIsInstance(scan_id, int)
@@ -113,6 +116,7 @@ class ApiBackendTests(unittest.TestCase):
         self.assertGreater(created["analysis"]["secret_exposure_count"], 0)
         self.assertIn("rule_match_count", created["analysis"])
         self.assertIn("cve_candidate_count", created["analysis"])
+        self.assertIn("hardening_simulation", created["analysis"])
         self.assertIn("sbom", created)
 
         list_response = self.client.get(
@@ -140,6 +144,7 @@ class ApiBackendTests(unittest.TestCase):
         self.assertIn("diff", payload)
         self.assertTrue(payload["diff"]["summary"]["changed"])
         self.assertIn("risk_shift", payload["diff"])
+        self.assertIn("hardening_shift", payload["diff"])
 
 
 if __name__ == "__main__":

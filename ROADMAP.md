@@ -20,6 +20,7 @@ We will not create a GitHub Release after every phase. Releases happen only at m
 | `v0.8.0` | Firmware Diff + Risk DNA Beta | Version risk diffing and behavior fingerprinting | After Phase 12 |
 | `v0.9.0` | Reports + Packaging RC | Reports, Docker, CI, and release candidate polish | After Phase 15 |
 | `v1.0.0` | Stable Open-Source Release | Complete polished release | After Phase 16 |
+| `v1.1.0` | Hardening Simulator Innovation | What-if remediation planning with projected risk reduction | After Phase 17 |
 
 Packages are not needed yet. Later we may publish a Docker image, a Python CLI package, and standalone binaries if the project is stable enough.
 
@@ -45,6 +46,7 @@ Packages are not needed yet. Later we may publish a Docker image, a Python CLI p
 | 14 | `phase/14-sample-corpus` | Add demo firmware corpus | Safe test firmware samples | Included in `v0.9.0` |
 | 15 | `phase/15-packaging-ci` | Package and automate | Docker and GitHub Actions | `v0.9.0` |
 | 16 | `phase/16-final-showcase` | Polish release | Screenshots, demo, docs, `v1.0.0` tag | `v1.0.0` |
+| 17 | `phase/17-hardening-simulator` | Add unique hardening simulation | Prioritized mitigation actions + what-if scenarios | `v1.1.0` |
 
 ## Build Philosophy
 
@@ -111,6 +113,6 @@ A phase is complete only when:
 
 ## Current Build Focus
 
-Current roadmap phase: `Phase 16 - Final Showcase`
+Current roadmap phase: `Phase 17 - Hardening Simulator`
 
-Next implementation phase: `Completed (v1.0.0)`
+Next implementation phase: `Release prep for v1.1.0`
