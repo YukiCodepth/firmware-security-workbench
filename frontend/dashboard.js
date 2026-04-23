@@ -281,12 +281,20 @@ function assistantReply(questionRaw) {
     "https",
   ]);
   const asksRiskDna = hasAny(question, ["risk dna", "dna", "risk profile", "risk fingerprint"]);
+  const asksRules = hasAny(question, [
+    "rule",
+    "rules",
+    "yara",
+    "signature",
+    "signatures",
+    "rule match",
+  ]);
   const asksAll = hasAny(question, ["all", "full", "everything"]);
   const asksThreshold = hasAny(question, ["or above", "and above", "or higher", "and higher"]);
   const requestedSeverity = severityFromQuestion(question);
 
   if (asksHelp) {
-    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, entropy, file type, and risk DNA.";
+    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, YARA/rule matches, entropy, file type, and risk DNA.";
   }
   if ((asksHistory && asksFindings) || (asksFindings && asksHistory)) {
     if (state.scans.length === 0) {
@@ -377,6 +385,22 @@ function assistantReply(questionRaw) {
     }
     return buildRiskDna(result, findings);
   }
+  if (asksRules) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    const engine = analysis.rule_engine || "unknown";
+    const matchCount = Number(analysis.rule_match_count || 0);
+    if (matchCount === 0) {
+      return `Rules engine (${engine}) found no matches in selected scan.`;
+    }
+    const matches = Array.isArray(analysis.rule_matches) ? analysis.rule_matches : [];
+    const preview = matches
+      .slice(0, 5)
+      .map((entry) => `${entry.severity || "info"}:${entry.rule_name || "unknown_rule"}`)
+      .join("; ");
+    return `Rules engine (${engine}) found ${matchCount} match(es). Top matches: ${preview}.`;
+  }
   if (asksFindings) {
     if (!result) {
       return "No selected scan yet. Click one from history first.";
@@ -412,7 +436,7 @@ function assistantReply(questionRaw) {
     return "Next: inspect highest-severity findings, verify credentials/endpoints manually, then run firmware diff against previous version.";
   }
 
-  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, risk dna, or next steps.";
+  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, yara rules, risk dna, or next steps.";
 }
 
 async function fetchJson(url, options = {}) {

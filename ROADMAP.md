@@ -111,6 +111,6 @@ A phase is complete only when:
 
 ## Current Build Focus
 
-Current roadmap phase: `Phase 7 - Security Detection MVP`
+Current roadmap phase: `Phase 8 - YARA Engine`
 
-Next implementation phase: `Phase 8 - YARA Engine`
+Next implementation phase: `Phase 9 - SBOM Generator`

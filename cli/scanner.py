@@ -8,6 +8,8 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .rule_engine import DEFAULT_RULES_DIR, run_rule_engine
+
 ScannerResult = dict[str, object]
 
 
@@ -820,6 +822,9 @@ def scan_firmware(
     *,
     min_string_length: int = 4,
     max_strings: int = 2000,
+    enable_rules: bool = True,
+    rules_dir: str | Path | None = DEFAULT_RULES_DIR,
+    rule_paths: list[str | Path] | None = None,
 ) -> ScannerResult:
     path = Path(file_path)
     if not path.exists():
@@ -843,13 +848,31 @@ def scan_firmware(
         secret_exposures=secret_exposures,
         endpoints=endpoints,
     )
+    if enable_rules:
+        resolved_rule_paths = (
+            [Path(item) for item in rule_paths] if rule_paths is not None else None
+        )
+        resolved_rules_dir = Path(rules_dir) if rules_dir is not None else None
+        rule_scan = run_rule_engine(
+            data,
+            rules_dir=resolved_rules_dir,
+            rule_paths=resolved_rule_paths,
+        )
+    else:
+        rule_scan = {
+            "engine": "disabled",
+            "rules_loaded": 0,
+            "rule_files": [],
+            "rule_matches": [],
+            "warnings": [],
+        }
     type_guess, format_details, architecture_hint = analyze_format(path, data)
 
     return {
         "scanner": {
             "name": "Firmware Security Workbench",
-            "version": "0.5.0-dev",
-            "phase": "07-secrets-scanner",
+            "version": "0.6.0-dev",
+            "phase": "08-yara-engine",
             "scanned_at_utc": datetime.now(timezone.utc).isoformat(),
         },
         "file": {
@@ -874,5 +897,11 @@ def scan_firmware(
             "endpoint_count": len(endpoints),
             "endpoints_preview": [item["url"] for item in endpoints[:20]],
             "security_posture": security_posture,
+            "rule_engine": rule_scan["engine"],
+            "rules_loaded": rule_scan["rules_loaded"],
+            "rule_files": rule_scan["rule_files"],
+            "rule_match_count": len(rule_scan["rule_matches"]),
+            "rule_matches": rule_scan["rule_matches"][:50],
+            "rule_warnings": rule_scan["warnings"],
         },
     }

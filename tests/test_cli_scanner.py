@@ -51,10 +51,54 @@ class ScannerCoreTests(unittest.TestCase):
             self.assertGreater(result["analysis"]["secret_exposure_count"], 0)
             self.assertGreater(result["analysis"]["endpoint_count"], 0)
             self.assertIn("security_posture", result["analysis"])
+            self.assertIn("rule_engine", result["analysis"])
+            self.assertIn("rule_match_count", result["analysis"])
+            self.assertGreater(result["analysis"]["rule_match_count"], 0)
 
             exposures = result["analysis"]["secret_exposures"]
             redacted_text = " ".join(item["evidence_redacted"] for item in exposures)
             self.assertNotIn("demo1234", redacted_text)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    def test_scan_with_custom_yara_rule_file(self) -> None:
+        with tempfile.NamedTemporaryFile(suffix=".yar", delete=False) as rule_file:
+            rule_file.write(
+                (
+                    "rule CUSTOM_MARKER_RULE : custom high {\n"
+                    "  meta:\n"
+                    "    severity = \"high\"\n"
+                    "  strings:\n"
+                    "    $a = \"FWB_UNIQUE_MARKER_7788\"\n"
+                    "  condition:\n"
+                    "    $a\n"
+                    "}\n"
+                ).encode("utf-8")
+            )
+            rule_path = Path(rule_file.name)
+
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as temp_file:
+            temp_file.write(b"prefix FWB_UNIQUE_MARKER_7788 suffix")
+            temp_path = Path(temp_file.name)
+
+        try:
+            result = scan_firmware(temp_path, rules_dir=None, rule_paths=[rule_path])
+            matches = result["analysis"]["rule_matches"]
+            self.assertTrue(any(match["rule_name"] == "CUSTOM_MARKER_RULE" for match in matches))
+        finally:
+            rule_path.unlink(missing_ok=True)
+            temp_path.unlink(missing_ok=True)
+
+    def test_scan_with_rules_disabled(self) -> None:
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as temp_file:
+            temp_file.write(b"password=abc123\nmqtt://broker.local\n")
+            temp_path = Path(temp_file.name)
+
+        try:
+            result = scan_firmware(temp_path, enable_rules=False)
+            self.assertEqual(result["analysis"]["rule_engine"], "disabled")
+            self.assertEqual(result["analysis"]["rules_loaded"], 0)
+            self.assertEqual(result["analysis"]["rule_match_count"], 0)
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -187,6 +231,7 @@ class ScannerCliTests(unittest.TestCase):
         self.assertIn("analysis", payload)
         self.assertIn("suspicious_findings", payload["analysis"])
         self.assertIn("format_details", payload["file"])
+        self.assertIn("rule_match_count", payload["analysis"])
         self.assertIn("storage", payload)
 
     def test_cli_history_list_and_show(self) -> None:
