@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 8 - YARA + Rules Engine`
+Current status: `Phase 9 - SBOM Generator`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, a browser dashboard, structured secret exposure detection, and a YARA-compatible rules engine with built-in and custom rule loading as part of `v0.6.0-dev`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, FastAPI endpoints, a browser dashboard, structured secret exposure detection, YARA-compatible rules, and CycloneDX-style SBOM component candidate generation as part of `v0.7.0-dev`.
 
 ## Quick Start
 
@@ -95,6 +95,12 @@ Run with an additional custom YARA rule file:
 
 ```bash
 ./scripts/fwb scan samples/demo-firmware.bin --rules-file rules/yara/fwb_core_rules.yar
+```
+
+Write CycloneDX SBOM JSON:
+
+```bash
+./scripts/fwb scan samples/demo-firmware.bin --sbom-out reports/generated/demo-sbom.json
 ```
 
 Write JSON report to disk:

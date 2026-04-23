@@ -281,6 +281,14 @@ function assistantReply(questionRaw) {
     "https",
   ]);
   const asksRiskDna = hasAny(question, ["risk dna", "dna", "risk profile", "risk fingerprint"]);
+  const asksSbom = hasAny(question, [
+    "sbom",
+    "component",
+    "components",
+    "dependencies",
+    "inventory",
+    "cyclonedx",
+  ]);
   const asksRules = hasAny(question, [
     "rule",
     "rules",
@@ -294,7 +302,7 @@ function assistantReply(questionRaw) {
   const requestedSeverity = severityFromQuestion(question);
 
   if (asksHelp) {
-    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, YARA/rule matches, entropy, file type, and risk DNA.";
+    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, YARA/rule matches, SBOM components, entropy, file type, and risk DNA.";
   }
   if ((asksHistory && asksFindings) || (asksFindings && asksHistory)) {
     if (state.scans.length === 0) {
@@ -385,6 +393,24 @@ function assistantReply(questionRaw) {
     }
     return buildRiskDna(result, findings);
   }
+  if (asksSbom) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    const candidateCount = Number(analysis.component_candidate_count || 0);
+    const sbomCount = Number(analysis.sbom_component_count || 0);
+    if (candidateCount === 0) {
+      return `SBOM has ${sbomCount} component(s) total (including firmware root), with no external component candidates detected.`;
+    }
+    const candidates = Array.isArray(analysis.component_candidates)
+      ? analysis.component_candidates
+      : [];
+    const preview = candidates
+      .slice(0, 5)
+      .map((entry) => `${entry.name || "unknown"} ${entry.version || "?"} (${entry.confidence || "low"})`)
+      .join("; ");
+    return `SBOM candidates: ${candidateCount}. Total SBOM components: ${sbomCount}. Top candidates: ${preview}.`;
+  }
   if (asksRules) {
     if (!result) {
       return "No selected scan yet.";
@@ -436,7 +462,7 @@ function assistantReply(questionRaw) {
     return "Next: inspect highest-severity findings, verify credentials/endpoints manually, then run firmware diff against previous version.";
   }
 
-  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, yara rules, risk dna, or next steps.";
+  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, yara rules, sbom components, risk dna, or next steps.";
 }
 
 async function fetchJson(url, options = {}) {
