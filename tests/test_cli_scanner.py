@@ -48,6 +48,29 @@ class ScannerCoreTests(unittest.TestCase):
             self.assertEqual(result["file"]["type_guess"], "Raw Binary")
             self.assertGreater(result["analysis"]["strings_count"], 0)
             self.assertGreater(result["analysis"]["suspicious_count"], 0)
+            self.assertGreater(result["analysis"]["secret_exposure_count"], 0)
+            self.assertGreater(result["analysis"]["endpoint_count"], 0)
+            self.assertIn("security_posture", result["analysis"])
+
+            exposures = result["analysis"]["secret_exposures"]
+            redacted_text = " ".join(item["evidence_redacted"] for item in exposures)
+            self.assertNotIn("demo1234", redacted_text)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    def test_secret_exposure_assignment_redaction(self) -> None:
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as temp_file:
+            temp_file.write(b"api_key=ABCDEF1234567890\naccess_token=tokenvalue123\n")
+            temp_path = Path(temp_file.name)
+
+        try:
+            result = scan_firmware(temp_path)
+            exposures = result["analysis"]["secret_exposures"]
+            self.assertGreaterEqual(len(exposures), 2)
+            indicators = {item["indicator"] for item in exposures}
+            self.assertTrue({"api_key", "access_token"}.issubset(indicators))
+            for item in exposures:
+                self.assertIn("*", item["evidence_redacted"])
         finally:
             temp_path.unlink(missing_ok=True)
 

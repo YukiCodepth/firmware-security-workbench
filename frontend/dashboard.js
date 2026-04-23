@@ -125,7 +125,11 @@ function findingsAtOrAbove(findings, severity) {
   return findings.filter((finding) => (SEVERITY_RANK[finding.severity] ?? -1) >= minRank);
 }
 
-function credentialFindings(findings) {
+function credentialFindings(analysis, findings) {
+  const exposures = Array.isArray(analysis?.secret_exposures) ? analysis.secret_exposures : [];
+  if (exposures.length > 0) {
+    return exposures;
+  }
   return findings.filter((finding) => {
     const text = String(finding.string || "").toLowerCase();
     const keywords = Array.isArray(finding.keywords)
@@ -141,6 +145,10 @@ function credentialFindings(findings) {
 }
 
 function extractUrls(result, findings) {
+  const endpointPreview = result?.analysis?.endpoints_preview;
+  if (Array.isArray(endpointPreview) && endpointPreview.length > 0) {
+    return Array.from(new Set(endpointPreview.map((item) => String(item))));
+  }
   const urls = new Set();
   const regex = /\b(?:https?:\/\/|mqtt:\/\/|ws:\/\/|wss:\/\/|ftp:\/\/)[^\s"']+/gi;
   const texts = [];
@@ -166,10 +174,18 @@ function extractUrls(result, findings) {
 }
 
 function buildRiskDna(result, findings) {
+  const analysis = result?.analysis || {};
+  const posture = analysis.security_posture;
+  if (posture && typeof posture === "object") {
+    const top = String(posture.top_severity || "-");
+    const postureBand = posture.risk_level ?? "-";
+    const postureScore = posture.score ?? "-";
+    return `Risk DNA posture=${postureBand} score=${postureScore} top_severity=${top}`;
+  }
   const top = highestSeverity(findings);
   const topRank = top ? SEVERITY_RANK[top.severity] ?? 0 : 0;
   const urls = extractUrls(result, findings);
-  const creds = credentialFindings(findings);
+  const creds = credentialFindings(analysis, findings);
   const hasDebug = findings.some((finding) =>
     String(finding.string || "").toLowerCase().includes("debug")
   );
@@ -332,14 +348,18 @@ function assistantReply(questionRaw) {
     if (!result) {
       return "No selected scan yet.";
     }
-    const creds = credentialFindings(findings);
+    const creds = credentialFindings(analysis, findings);
     if (creds.length === 0) {
       return "No credential-like findings detected in selected scan.";
     }
-    return `Credential-like findings: ${creds.length}. ${creds
-      .slice(0, 4)
-      .map(summarizeFinding)
-      .join("; ")}.`;
+    if (analysis.secret_exposure_count) {
+      const samples = creds
+        .slice(0, 4)
+        .map((entry) => `${entry.severity}@${entry.offset_hex} ${entry.indicator}`)
+        .join("; ");
+      return `Secret exposures: ${analysis.secret_exposure_count}. Samples: ${samples}.`;
+    }
+    return `Credential-like findings: ${creds.length}. ${creds.slice(0, 4).map(summarizeFinding).join("; ")}.`;
   }
   if (asksUrls) {
     if (!result) {
