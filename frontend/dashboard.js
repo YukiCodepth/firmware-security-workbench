@@ -78,55 +78,111 @@ function highestSeverity(findings) {
   return best;
 }
 
+function normalizeQuestion(questionRaw) {
+  return questionRaw
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hasAny(text, terms) {
+  return terms.some((term) => text.includes(term));
+}
+
 function assistantReply(questionRaw) {
-  const question = questionRaw.toLowerCase().trim();
+  const question = normalizeQuestion(questionRaw);
   const result = currentResult();
   const analysis = result?.analysis || {};
   const file = result?.file || {};
   const findings = Array.isArray(analysis.suspicious_findings)
     ? analysis.suspicious_findings
     : [];
+  const asksHelp = hasAny(question, ["help", "what can you do", "commands", "examples"]);
+  const asksHistory = hasAny(question, [
+    "history",
+    "scan history",
+    "saved scans",
+    "past scans",
+    "previous scans",
+  ]);
+  const asksCount = hasAny(question, ["how many", "count", "number of", "total"]);
+  const asksLatest = hasAny(question, ["latest", "recent", "newest", "last"]);
+  const asksSelected = hasAny(question, ["selected", "current", "this scan"]);
+  const asksSummary = hasAny(question, ["summary", "summarize", "overview", "status"]);
+  const asksEntropy = question.includes("entropy");
+  const asksType = hasAny(question, ["type", "format", "file type"]);
+  const asksSeverity = hasAny(question, [
+    "most severe",
+    "top severity",
+    "severity",
+    "critical",
+    "highest risk",
+    "highest severity",
+  ]);
+  const asksFindings = hasAny(question, [
+    "finding",
+    "findings",
+    "issue",
+    "issues",
+    "alert",
+    "alerts",
+    "suspicious",
+    "problem",
+    "problems",
+  ]);
+  const asksNext = hasAny(question, ["next", "what should i do", "what now", "recommend"]);
 
-  if (
-    question.includes("help") ||
-    question.includes("what can you do") ||
-    question.includes("commands")
-  ) {
+  if (asksHelp) {
     return "I can summarize selected scan, count history entries, report top severity, entropy, type, and suggest next checks.";
   }
-  if (question.includes("how many") && question.includes("scan")) {
+  if ((asksHistory && asksFindings) || (asksFindings && asksHistory)) {
+    if (state.scans.length === 0) {
+      return "No scans in history yet.";
+    }
+    const totalFindings = state.scans.reduce(
+      (sum, scan) => sum + Number(scan.suspicious_count || 0),
+      0
+    );
+    return `History view has ${state.scans.length} scans and ${totalFindings} total findings.`;
+  }
+  if (
+    (asksCount && (asksHistory || question.includes("scan"))) ||
+    question === "history" ||
+    question === "scan history" ||
+    question === "scans"
+  ) {
     return `There are ${state.scans.length} scans in current history view.`;
   }
-  if (question.includes("latest") && question.includes("scan")) {
+  if (asksLatest && (asksHistory || question.includes("scan"))) {
     if (state.scans.length === 0) {
       return "No scans in history yet.";
     }
     const latest = state.scans[0];
     return `Latest is scan #${latest.id}: ${latest.file_name} (${latest.type_guess}), findings=${latest.suspicious_count}.`;
   }
-  if (question.includes("selected") && question.includes("summary")) {
+  if (
+    (asksSelected && asksSummary) ||
+    (asksSummary && !asksHistory && !asksLatest)
+  ) {
     if (!result) {
       return "No scan selected. Click one from history or run a new scan.";
     }
     return `Selected ${file.name || "scan"} is ${file.type_guess || "unknown type"}, entropy ${analysis.entropy ?? "-"}, findings ${analysis.suspicious_count ?? 0}.`;
   }
-  if (question.includes("entropy")) {
+  if (asksEntropy) {
     if (!result) {
       return "No selected scan yet.";
     }
     return `Selected scan entropy is ${analysis.entropy ?? "unknown"}.`;
   }
-  if (question.includes("type") || question.includes("format")) {
+  if (asksType) {
     if (!result) {
       return "No selected scan yet.";
     }
     return `Selected file type is ${file.type_guess || "unknown"}.`;
   }
-  if (
-    question.includes("most severe") ||
-    question.includes("top severity") ||
-    question.includes("critical")
-  ) {
+  if (asksSeverity) {
     if (!result) {
       return "No selected scan yet.";
     }
@@ -136,7 +192,25 @@ function assistantReply(questionRaw) {
     }
     return `Top severity is ${top.severity} at ${top.offset_hex}, keywords ${Array.isArray(top.keywords) ? top.keywords.join(",") : "-"}.`;
   }
-  if (question.includes("next") || question.includes("what should i do")) {
+  if (asksFindings) {
+    if (!result) {
+      return "No selected scan yet. Click one from history first.";
+    }
+    if (findings.length === 0) {
+      return "Selected scan has no suspicious findings.";
+    }
+    const preview = findings
+      .slice(0, 3)
+      .map((finding) => {
+        const keys = Array.isArray(finding.keywords)
+          ? finding.keywords.join(",")
+          : "-";
+        return `${finding.severity}@${finding.offset_hex} [${keys}]`;
+      })
+      .join("; ");
+    return `Selected scan has ${findings.length} findings. Top entries: ${preview}.`;
+  }
+  if (asksNext) {
     if (!result) {
       return "Run a scan first, then I can suggest targeted next steps.";
     }
