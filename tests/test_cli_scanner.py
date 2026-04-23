@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import struct
 import subprocess
 import sys
 import tempfile
@@ -49,6 +50,90 @@ class ScannerCoreTests(unittest.TestCase):
         finally:
             temp_path.unlink(missing_ok=True)
 
+    def test_scan_intel_hex_metadata(self) -> None:
+        hex_payload = (
+            b":10010000214601360121470136007EFE09D2190140\n"
+            b":00000001FF\n"
+        )
+        with tempfile.NamedTemporaryFile(suffix=".hex", delete=False) as temp_file:
+            temp_file.write(hex_payload)
+            temp_path = Path(temp_file.name)
+
+        try:
+            result = scan_firmware(temp_path)
+            self.assertEqual(result["file"]["type_guess"], "Intel HEX")
+            format_details = result["file"]["format_details"]
+            self.assertEqual(format_details["parser_status"], "ok")
+            self.assertEqual(format_details["valid_records"], 2)
+            self.assertEqual(format_details["data_records"], 1)
+            self.assertEqual(format_details["total_data_bytes"], 16)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    def test_scan_uf2_metadata(self) -> None:
+        header = struct.pack(
+            "<IIIIIIII",
+            0x0A324655,
+            0x9E5D5157,
+            0x00002000,
+            0x10000000,
+            16,
+            0,
+            1,
+            0xE48BFF56,
+        )
+        payload = b"FWB_UF2_DEMO_0001"
+        block = header + payload + bytes(476 - len(payload)) + struct.pack("<I", 0x0AB16F30)
+
+        with tempfile.NamedTemporaryFile(suffix=".uf2", delete=False) as temp_file:
+            temp_file.write(block)
+            temp_path = Path(temp_file.name)
+
+        try:
+            result = scan_firmware(temp_path)
+            self.assertEqual(result["file"]["type_guess"], "UF2")
+            self.assertEqual(result["file"]["architecture_hint"], "RP2040")
+            format_details = result["file"]["format_details"]
+            self.assertEqual(format_details["valid_blocks"], 1)
+            self.assertEqual(format_details["invalid_blocks"], 0)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    def test_scan_elf_metadata(self) -> None:
+        ident = b"\x7fELF" + bytes([2, 1, 1, 0, 0]) + bytes(7)
+        elf_header = struct.pack(
+            "<HHIQQQIHHHHHH",
+            2,  # e_type
+            0x3E,  # e_machine (x86-64)
+            1,  # e_version
+            0x400000,  # e_entry
+            0,  # e_phoff
+            0,  # e_shoff
+            0,  # e_flags
+            64,  # e_ehsize
+            0,  # e_phentsize
+            0,  # e_phnum
+            0,  # e_shentsize
+            0,  # e_shnum
+            0,  # e_shstrndx
+        )
+        elf_data = ident + elf_header
+
+        with tempfile.NamedTemporaryFile(suffix=".elf", delete=False) as temp_file:
+            temp_file.write(elf_data)
+            temp_path = Path(temp_file.name)
+
+        try:
+            result = scan_firmware(temp_path)
+            self.assertEqual(result["file"]["type_guess"], "ELF")
+            self.assertEqual(result["file"]["architecture_hint"], "AMD x86-64")
+            format_details = result["file"]["format_details"]
+            self.assertEqual(format_details["class"], "ELF64")
+            self.assertEqual(format_details["machine"], "AMD x86-64")
+            self.assertEqual(format_details["entry_point_hex"], "0x400000")
+        finally:
+            temp_path.unlink(missing_ok=True)
+
 
 class ScannerCliTests(unittest.TestCase):
     def test_cli_scan_json_output(self) -> None:
@@ -69,6 +154,7 @@ class ScannerCliTests(unittest.TestCase):
         self.assertIn("sha256", payload["file"])
         self.assertIn("analysis", payload)
         self.assertIn("suspicious_findings", payload["analysis"])
+        self.assertIn("format_details", payload["file"])
 
 
 if __name__ == "__main__":

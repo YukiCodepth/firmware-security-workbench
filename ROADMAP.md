@@ -111,6 +111,6 @@ A phase is complete only when:
 
 ## Current Build Focus
 
-Current roadmap phase: `Phase 2 - CLI Scanner MVP`
+Current roadmap phase: `Phase 3 - Firmware Metadata + Format Detection`
 
-Next implementation phase: `Phase 3 - Firmware Metadata + Format Detection`
+Next implementation phase: `Phase 4 - Local Storage Layer`

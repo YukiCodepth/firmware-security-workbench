@@ -49,12 +49,17 @@ def _print_summary(result: dict[str, object]) -> None:
     file_info = result["file"]
     analysis = result["analysis"]
     findings = analysis["suspicious_findings"][:10]
+    format_details = file_info.get("format_details", {})
 
     print("Firmware Security Workbench Scan")
     print("--------------------------------")
     print(f"File: {file_info['name']}")
     print(f"Path: {file_info['path']}")
     print(f"Type: {file_info['type_guess']}")
+    if file_info.get("architecture_hint"):
+        print(f"Architecture hint: {file_info['architecture_hint']}")
+    if isinstance(format_details, dict) and format_details.get("parser_status"):
+        print(f"Format parser status: {format_details['parser_status']}")
     print(f"Size (bytes): {file_info['size_bytes']}")
     print(f"SHA256: {file_info['sha256']}")
     print(f"Entropy: {analysis['entropy']}")

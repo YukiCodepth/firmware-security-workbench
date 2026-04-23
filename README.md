@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 2 - CLI Scanner MVP`
+Current status: `Phase 3 - Firmware Metadata + Format Detection`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. We are now implementing the first scanner command for `v0.1.0`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata for `ELF`, `Intel HEX`, and `UF2` as part of `v0.2.0-dev`.
 
 ## Phase 2 Quick Start
 
@@ -71,6 +71,12 @@ Run the scanner:
 
 ```bash
 ./scripts/fwb scan samples/demo-firmware.bin
+```
+
+Scan Intel HEX:
+
+```bash
+./scripts/fwb scan samples/demo-firmware.hex --json
 ```
 
 Print full JSON output:
