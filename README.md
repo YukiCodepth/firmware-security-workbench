@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 4 - Local Storage Layer`
+Current status: `Phase 5 - FastAPI Backend`
 
-The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata and SQLite scan history as part of `v0.3.0-dev`.
+The repo structure, product requirements, MVP boundaries, prior-art research, ethical scope, and release-driven roadmap are ready. The scanner now supports format-aware metadata, SQLite scan history, and a local FastAPI backend as part of `v0.3.0-dev`.
 
 ## Quick Start
 
@@ -115,6 +115,18 @@ Run tests:
 python3 -m unittest discover -s tests -v
 ```
 
+Run API server:
+
+```bash
+uvicorn backend.app:app --reload --port 8000
+```
+
+API docs:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
 ## Safety Scope
 
 This project is for defensive firmware analysis, developer education, and security auditing. It does not include exploit generation, unauthorized device access, credential abuse, or malware deployment.
@@ -122,7 +134,7 @@ This project is for defensive firmware analysis, developer education, and securi
 ## Repo Layout
 
 ```text
-backend/          Future FastAPI backend
+backend/          FastAPI backend
 cli/              Future command-line scanner
 docs/             Project docs, architecture, learning notes
 frontend/         Future web dashboard

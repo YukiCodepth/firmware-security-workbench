@@ -665,7 +665,7 @@ def scan_firmware(
         "scanner": {
             "name": "Firmware Security Workbench",
             "version": "0.3.0-dev",
-            "phase": "04-storage-layer",
+            "phase": "05-fastapi-backend",
             "scanned_at_utc": datetime.now(timezone.utc).isoformat(),
         },
         "file": {

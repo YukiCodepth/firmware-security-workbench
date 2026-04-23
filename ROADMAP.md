@@ -111,6 +111,6 @@ A phase is complete only when:
 
 ## Current Build Focus
 
-Current roadmap phase: `Phase 4 - Local Storage Layer`
+Current roadmap phase: `Phase 5 - FastAPI Backend`
 
-Next implementation phase: `Phase 5 - FastAPI Backend`
+Next implementation phase: `Phase 6 - Web Dashboard Alpha`
