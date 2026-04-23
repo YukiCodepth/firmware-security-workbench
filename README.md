@@ -61,9 +61,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 1 - Product Requirements + Prior-Art Research`
+Current status: `Phase 1b - Release-Driven Roadmap`
 
-The repo structure is ready. Product requirements, MVP boundaries, prior-art research, and ethical scope are being defined before scanner code begins.
+The repo structure, product requirements, MVP boundaries, prior-art research, and ethical scope are ready. The roadmap now includes milestone GitHub releases from `v0.1.0` through `v1.0.0`.
 
 ## Safety Scope
 

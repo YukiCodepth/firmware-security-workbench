@@ -1,28 +1,90 @@
 # Firmware Security Workbench Roadmap
 
-This roadmap tracks the complete project from empty repository to a polished `v1.0` open-source release.
+This roadmap tracks Firmware Security Workbench from project foundation to a stable `v1.0.0` open-source release.
+
+The roadmap is product-first: build a useful CLI, then a local API, then a dashboard, then deeper security intelligence. The project should stay practical, teachable, and defensively focused while still becoming strong enough for a serious portfolio or open-source showcase.
+
+## Release Strategy
+
+We will not create a GitHub Release after every phase. Releases happen only at meaningful milestones where users can try a clear capability.
+
+| Release | Name | Main Capability | Release Moment |
+| --- | --- | --- | --- |
+| `v0.1.0` | CLI Scanner Preview | First useful command-line scanner | After Phase 2 |
+| `v0.2.0` | Firmware Metadata + Format Detection | Better metadata and firmware type support | After Phase 3 |
+| `v0.3.0` | Local Scan History + API | SQLite storage and FastAPI upload/scan API | After Phase 5 |
+| `v0.4.0` | Web Dashboard Alpha | Local dashboard for upload and scan summaries | After Phase 6 |
+| `v0.5.0` | Security Detection MVP | Secrets, suspicious strings, and MVP workflow | After Phase 7 |
+| `v0.6.0` | YARA + Rules Engine | Custom rules and built-in firmware checks | After Phase 8 |
+| `v0.7.0` | SBOM + CVE Candidate Engine | Component inventory and vulnerability candidates | After Phase 10 |
+| `v0.8.0` | Firmware Diff + Risk DNA Beta | Version risk diffing and behavior fingerprinting | After Phase 12 |
+| `v0.9.0` | Reports + Packaging RC | Reports, Docker, CI, and release candidate polish | After Phase 15 |
+| `v1.0.0` | Stable Open-Source Release | Complete polished release | After Phase 16 |
+
+Packages are not needed yet. Later we may publish a Docker image, a Python CLI package, and standalone binaries if the project is stable enough.
 
 ## Phase Overview
 
-| Phase | Branch | Main Goal | Output |
-| --- | --- | --- | --- |
-| 0 | `phase/00-project-foundation` | Create repo foundation | Docs, structure, workflow |
-| 1 | `phase/01-requirements-prior-art` | Define MVP and research existing tools | Product requirements and prior-art notes |
-| 2 | `phase/02-cli-scanner-mvp` | Build first scanner | CLI scans one file and outputs JSON |
-| 3 | `phase/03-format-detection` | Detect firmware formats | `.bin`, `.elf`, `.hex`, `.uf2` metadata |
-| 4 | `phase/04-storage-layer` | Save scan history | SQLite database and schema |
-| 5 | `phase/05-fastapi-backend` | Add API | Upload and scan endpoints |
-| 6 | `phase/06-web-dashboard` | Add web UI | Upload page and scan result dashboard |
-| 7 | `phase/07-secrets-scanner` | Detect embedded secrets | Credentials, keys, URLs, tokens |
-| 8 | `phase/08-yara-engine` | Add rule engine | YARA matching and custom rules |
-| 9 | `phase/09-sbom-generator` | Generate component inventory | Basic CycloneDX-style SBOM |
-| 10 | `phase/10-cve-risk-engine` | Match possible vulnerabilities | CVE candidates with confidence |
-| 11 | `phase/11-firmware-diff` | Compare firmware versions | Risk delta between old and new firmware |
-| 12 | `phase/12-risk-dna` | Add behavior fingerprint | Firmware Risk DNA profile |
-| 13 | `phase/13-report-exporter` | Export reports | HTML, Markdown, JSON reports |
-| 14 | `phase/14-sample-corpus` | Add demo firmware corpus | Safe test firmware samples |
-| 15 | `phase/15-packaging-ci` | Package and automate | Docker and GitHub Actions |
-| 16 | `phase/16-final-showcase` | Polish release | Screenshots, demo, `v1.0` tag |
+| Phase | Branch | Main Goal | Output | Release Impact |
+| --- | --- | --- | --- | --- |
+| 0 | `phase/00-project-foundation` | Create repo foundation | Docs, structure, workflow | No release |
+| 1 | `phase/01-requirements-prior-art` | Define MVP and research existing tools | Requirements and prior-art notes | No release |
+| 1b | `phase/01b-release-roadmap` | Add release-driven roadmap | Release plan and final roadmap docs | No release |
+| 2 | `phase/02-cli-scanner-mvp` | Build first scanner | CLI scans one file and outputs JSON | `v0.1.0` |
+| 3 | `phase/03-format-detection` | Detect firmware formats | `.bin`, `.elf`, `.hex`, `.uf2` metadata | `v0.2.0` |
+| 4 | `phase/04-storage-layer` | Save scan history | SQLite database and schema | Included in `v0.3.0` |
+| 5 | `phase/05-fastapi-backend` | Add API | Upload and scan endpoints | `v0.3.0` |
+| 6 | `phase/06-web-dashboard` | Add web UI | Upload page and scan result dashboard | `v0.4.0` |
+| 7 | `phase/07-secrets-scanner` | Detect embedded secrets | Credentials, keys, URLs, tokens | `v0.5.0` |
+| 8 | `phase/08-yara-engine` | Add rule engine | YARA matching and custom rules | `v0.6.0` |
+| 9 | `phase/09-sbom-generator` | Generate component inventory | Basic CycloneDX-style SBOM | Included in `v0.7.0` |
+| 10 | `phase/10-cve-risk-engine` | Match possible vulnerabilities | CVE candidates with confidence | `v0.7.0` |
+| 11 | `phase/11-firmware-diff` | Compare firmware versions | Risk delta between old and new firmware | Included in `v0.8.0` |
+| 12 | `phase/12-risk-dna` | Add behavior fingerprint | Firmware Risk DNA profile | `v0.8.0` |
+| 13 | `phase/13-report-exporter` | Export reports | HTML, Markdown, JSON reports | Included in `v0.9.0` |
+| 14 | `phase/14-sample-corpus` | Add demo firmware corpus | Safe test firmware samples | Included in `v0.9.0` |
+| 15 | `phase/15-packaging-ci` | Package and automate | Docker and GitHub Actions | `v0.9.0` |
+| 16 | `phase/16-final-showcase` | Polish release | Screenshots, demo, docs, `v1.0.0` tag | `v1.0.0` |
+
+## Build Philosophy
+
+- Build a working CLI before building a UI.
+- Build local-first features before cloud or SaaS ideas.
+- Keep evidence separate from interpretation.
+- Use confidence levels for uncertain findings.
+- Prefer useful developer reports over noisy raw output.
+- Keep offensive features out of scope.
+- Add advanced integrations only after the MVP works.
+
+## MVP Definition
+
+The minimum useful product is complete after Phase 7 and release `v0.5.0`.
+
+The MVP includes:
+
+- scan firmware from CLI
+- upload firmware from API or web UI
+- extract metadata, hashes, strings, entropy
+- detect suspicious strings and likely secrets
+- save scan history locally
+- produce structured JSON output
+- show scan summaries in the dashboard
+
+Everything after Phase 7 makes the project more powerful, more open-source ready, and more innovative.
+
+## Advanced Feature Direction
+
+After the MVP, the project moves into deeper firmware security intelligence:
+
+- YARA rules for firmware artifacts
+- CycloneDX SBOM export
+- possible CVE matching with confidence levels
+- firmware version diffing
+- Firmware Risk DNA behavior profiling
+- optional Binwalk integration for extraction
+- optional Ghidra headless integration for deeper binary metadata
+- optional Linux and embedded device profile templates
+- optional sample vulnerable firmware for ESP32, STM32, Arduino, and Pico-style demos
 
 ## Phase Completion Rule
 
@@ -35,31 +97,20 @@ A phase is complete only when:
 - the phase branch is merged into `main`
 - `main` remains runnable or at least clean
 
-## Recommended Semester Timeline
+## Recommended Startup/Product Timeline
 
-- Weeks 1-2: Phases 0-2
-- Weeks 3-4: Phases 3-5
-- Weeks 5-6: Phase 6
-- Weeks 7-8: Phases 7-8
-- Weeks 9-10: Phases 9-10
-- Weeks 11-12: Phases 11-12
-- Weeks 13-14: Phases 13-15
-- Week 15: Phase 16
-- Week 16: buffer, bug fixes, presentation, final report
-
-## MVP Definition
-
-The minimum useful version is complete after Phase 7:
-
-- scan firmware from CLI
-- upload firmware from API or web UI
-- extract metadata, hashes, strings, entropy
-- detect suspicious strings and secrets
-- save scan history
-- produce structured JSON output
-
-Everything after that makes the project stronger, more innovative, and more showcase-ready.
+- Weeks 1-2: project foundation, requirements, roadmap, CLI scanner
+- Weeks 3-4: format detection, storage, API
+- Weeks 5-6: web dashboard alpha
+- Weeks 7-8: secrets scanner and security detection MVP
+- Weeks 9-10: YARA, SBOM, possible CVE matching
+- Weeks 11-12: firmware diffing and Firmware Risk DNA
+- Weeks 13-14: reports, sample corpus, packaging, CI
+- Week 15: final showcase and `v1.0.0`
+- Week 16: buffer, bug fixes, demo video, final presentation
 
 ## Current Build Focus
 
-Phase 1 defines the product requirements and compares this project against existing firmware analysis tools. The next implementation phase is Phase 2, where the first CLI scanner will be built.
+Current roadmap phase: `Phase 1b - Release-Driven Roadmap`
+
+Next implementation phase: `Phase 2 - CLI Scanner MVP`
