@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .cve_engine import match_cve_candidates, summarize_cve_confidence
+from .hardening_simulator import simulate_hardening
 from .risk_dna import build_risk_dna
 from .rule_engine import DEFAULT_RULES_DIR, run_rule_engine
 
@@ -1068,6 +1069,7 @@ def scan_firmware(
     suspicious_findings = detect_suspicious_strings(strings)
     secret_exposures = detect_secret_exposures(strings)
     endpoints = extract_network_endpoints(strings)
+    entropy = shannon_entropy(data)
     security_posture = summarize_security_posture(
         suspicious_findings=suspicious_findings,
         secret_exposures=secret_exposures,
@@ -1097,7 +1099,7 @@ def scan_firmware(
     cve_confidence_summary = summarize_cve_confidence(cve_candidates)
     type_guess, format_details, architecture_hint = analyze_format(path, data)
     scanned_at_utc = datetime.now(timezone.utc).isoformat()
-    scanner_version = "1.0.0"
+    scanner_version = "1.1.0"
     file_info = {
         "path": str(path.resolve()),
         "name": path.name,
@@ -1125,7 +1127,29 @@ def scan_firmware(
                 "rule_match_count": len(rule_scan["rule_matches"]),
                 "component_candidate_count": len(component_candidates),
                 "cve_candidate_count": len(cve_candidates),
-                "entropy": shannon_entropy(data),
+                "entropy": entropy,
+            },
+        }
+    )
+    hardening_simulation = simulate_hardening(
+        {
+            "file": file_info,
+            "analysis": {
+                "suspicious_count": len(suspicious_findings),
+                "suspicious_findings": suspicious_findings,
+                "secret_exposure_count": len(secret_exposures),
+                "secret_exposures": secret_exposures,
+                "endpoint_count": len(endpoints),
+                "endpoints_preview": [item["url"] for item in endpoints],
+                "rule_match_count": len(rule_scan["rule_matches"]),
+                "rule_matches": rule_scan["rule_matches"],
+                "component_candidate_count": len(component_candidates),
+                "component_candidates": component_candidates,
+                "cve_candidate_count": len(cve_candidates),
+                "cve_candidates": cve_candidates,
+                "entropy": entropy,
+                "security_posture": security_posture,
+                "risk_dna": risk_dna,
             },
         }
     )
@@ -1134,12 +1158,12 @@ def scan_firmware(
         "scanner": {
             "name": "Firmware Security Workbench",
             "version": scanner_version,
-            "phase": "10-cve-risk-engine",
+            "phase": "17-hardening-simulator",
             "scanned_at_utc": scanned_at_utc,
         },
         "file": file_info,
         "analysis": {
-            "entropy": shannon_entropy(data),
+            "entropy": entropy,
             "strings_count": len(strings),
             "strings_truncated": strings_truncated,
             "strings_preview": [entry["value"] for entry in strings[:25]],
@@ -1166,6 +1190,9 @@ def scan_firmware(
             "sbom_component_count": len(sbom["components"]),
             "sbom_vulnerability_count": len(sbom.get("vulnerabilities", [])),
             "risk_dna": risk_dna,
+            "hardening_simulation": hardening_simulation,
+            "hardening_actions_count": hardening_simulation.get("actions_count", 0),
+            "hardening_projected_score": hardening_simulation.get("projected", {}).get("score", 0),
         },
         "sbom": sbom,
     }

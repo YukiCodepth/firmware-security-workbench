@@ -260,10 +260,23 @@ def _print_summary(result: dict[str, object]) -> None:
             f" (score {posture.get('score', '-')}, top severity {posture.get('top_severity', '-')})"
         )
     risk_dna = analysis.get("risk_dna", {})
+    hardening = analysis.get("hardening_simulation", {})
+    if not isinstance(hardening, dict):
+        hardening = {}
+    projected = hardening.get("projected", {})
+    if not isinstance(projected, dict):
+        projected = {}
     if isinstance(risk_dna, dict) and risk_dna:
         print(
             f"Risk DNA: {risk_dna.get('band', '-')}"
             f" (score {risk_dna.get('score', '-')}, fingerprint {risk_dna.get('fingerprint', '-')})"
+        )
+    if hardening:
+        print(
+            "Hardening simulator: "
+            f"projected score {projected.get('score', '-')} "
+            f"({projected.get('band', '-')}), "
+            f"actions {hardening.get('actions_count', 0)}"
         )
 
     if not findings:
@@ -316,6 +329,14 @@ def _print_summary(result: dict[str, object]) -> None:
                 f"{candidate.get('component_name', 'unknown')} {candidate.get('component_version', '?')} "
                 f"severity={candidate.get('severity', 'unknown')} cvss={candidate.get('cvss_base_score', '-')}"
             )
+    hardening_actions = hardening.get("actions", [])
+    if isinstance(hardening_actions, list) and hardening_actions:
+        print("\nTop hardening actions:")
+        for action in hardening_actions[:5]:
+            print(
+                f"- {action.get('title', 'Unnamed action')} "
+                f"(effort={action.get('effort', '-')}, reduction={action.get('estimated_risk_reduction', 0)})"
+            )
 
 
 def _print_diff_summary(diff_payload: dict[str, object]) -> None:
@@ -327,12 +348,15 @@ def _print_diff_summary(diff_payload: dict[str, object]) -> None:
     summary = diff.get("summary", {})
     delta = diff.get("delta", {})
     risk_shift = diff.get("risk_shift", {})
+    hardening_shift = diff.get("hardening_shift", {})
     if not isinstance(summary, dict):
         summary = {}
     if not isinstance(delta, dict):
         delta = {}
     if not isinstance(risk_shift, dict):
         risk_shift = {}
+    if not isinstance(hardening_shift, dict):
+        hardening_shift = {}
 
     print("Firmware Security Workbench Diff")
     print("--------------------------------")
@@ -353,6 +377,12 @@ def _print_diff_summary(diff_payload: dict[str, object]) -> None:
         f"trend={risk_shift.get('trend', 'risk_stable')}, "
         f"score_delta={risk_shift.get('score_delta', 0)}, "
         f"{risk_shift.get('old_band', '-')} -> {risk_shift.get('new_band', '-')}"
+    )
+    print(
+        "Hardening shift: "
+        f"trend={hardening_shift.get('trend', 'hardening_stable')}, "
+        f"potential_delta={hardening_shift.get('reduction_potential_delta', 0)}, "
+        f"{hardening_shift.get('old_projected_band', '-')} -> {hardening_shift.get('new_projected_band', '-')}"
     )
 
 

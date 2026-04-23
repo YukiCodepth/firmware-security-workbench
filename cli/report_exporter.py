@@ -30,6 +30,21 @@ def render_scan_markdown(scan_result: dict[str, object]) -> str:
     lines.append(f"- Rule matches: `{analysis.get('rule_match_count', 0)}`")
     lines.append(f"- SBOM candidates: `{analysis.get('component_candidate_count', 0)}`")
     lines.append(f"- CVE candidates: `{analysis.get('cve_candidate_count', 0)}`")
+    hardening = analysis.get("hardening_simulation", {})
+    if not isinstance(hardening, dict):
+        hardening = {}
+    baseline = hardening.get("baseline", {})
+    projected = hardening.get("projected", {})
+    if not isinstance(baseline, dict):
+        baseline = {}
+    if not isinstance(projected, dict):
+        projected = {}
+    if hardening:
+        lines.append(
+            "- Hardening projection: "
+            f"`{baseline.get('score', '-')}` -> `{projected.get('score', '-')}` "
+            f"(actions: `{hardening.get('actions_count', 0)}`)"
+        )
     lines.append("")
     lines.append("## Top Findings")
     findings = list(analysis.get("suspicious_findings", []))[:10]
@@ -53,6 +68,29 @@ def render_scan_markdown(scan_result: dict[str, object]) -> str:
             )
     else:
         lines.append("- No CVE candidates.")
+    lines.append("")
+    lines.append("## Hardening Simulator")
+    if hardening:
+        lines.append(
+            f"- Baseline: `{baseline.get('score', '-')}` (`{baseline.get('band', '-')}`)"
+        )
+        lines.append(
+            f"- Projected: `{projected.get('score', '-')}` (`{projected.get('band', '-')}`)"
+        )
+        lines.append(f"- Estimated reduction: `{projected.get('estimated_reduction', 0)}`")
+        lines.append(f"- Recommended actions: `{hardening.get('actions_count', 0)}`")
+        actions = list(hardening.get("actions", []))[:8]
+        if actions:
+            lines.append("")
+            lines.append("### Top Actions")
+            for action in actions:
+                lines.append(
+                    f"- {action.get('title', 'Unnamed action')} "
+                    f"(effort: {action.get('effort', '-')}, "
+                    f"reduction: {action.get('estimated_risk_reduction', 0)})"
+                )
+    else:
+        lines.append("- Hardening simulation data is not available.")
     return "\n".join(lines) + "\n"
 
 
@@ -63,12 +101,15 @@ def render_diff_markdown(diff_payload: dict[str, object]) -> str:
     summary = diff.get("summary", {})
     delta = diff.get("delta", {})
     risk_shift = diff.get("risk_shift", {})
+    hardening_shift = diff.get("hardening_shift", {})
     if not isinstance(summary, dict):
         summary = {}
     if not isinstance(delta, dict):
         delta = {}
     if not isinstance(risk_shift, dict):
         risk_shift = {}
+    if not isinstance(hardening_shift, dict):
+        hardening_shift = {}
 
     lines: list[str] = []
     lines.append("# Firmware Diff Report")
@@ -86,6 +127,22 @@ def render_diff_markdown(diff_payload: dict[str, object]) -> str:
     lines.append(f"- Score delta: `{risk_shift.get('score_delta', 0)}`")
     lines.append(f"- Old band: `{risk_shift.get('old_band', '-')}`")
     lines.append(f"- New band: `{risk_shift.get('new_band', '-')}`")
+    lines.append("")
+    lines.append("## Hardening Shift")
+    lines.append(f"- Trend: `{hardening_shift.get('trend', 'hardening_stable')}`")
+    lines.append(
+        "- Reduction potential (old -> new): "
+        f"`{hardening_shift.get('old_reduction_potential', 0)}` -> "
+        f"`{hardening_shift.get('new_reduction_potential', 0)}`"
+    )
+    lines.append(
+        f"- Reduction potential delta: `{hardening_shift.get('reduction_potential_delta', 0)}`"
+    )
+    lines.append(
+        "- Projected band (old -> new): "
+        f"`{hardening_shift.get('old_projected_band', '-')}` -> "
+        f"`{hardening_shift.get('new_projected_band', '-')}`"
+    )
     return "\n".join(lines) + "\n"
 
 

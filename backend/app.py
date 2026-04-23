@@ -12,6 +12,8 @@ from cli.rule_engine import DEFAULT_RULES_DIR
 from cli.scanner import ScanError, scan_firmware
 from cli.storage import DEFAULT_DB_PATH, get_scan_record, list_scans, save_scan_result
 
+API_VERSION = "1.1.0"
+
 
 def _db_path_from_param(db_path: str | None) -> Path:
     if db_path is None or not db_path.strip():
@@ -88,7 +90,7 @@ def _scan_uploaded_payload(
 
 app = FastAPI(
     title="Firmware Security Workbench API",
-    version="1.0.0",
+    version=API_VERSION,
     description="Local API for firmware scanning and scan history",
 )
 
@@ -103,7 +105,7 @@ def root() -> dict[str, object]:
     return {
         "service": "Firmware Security Workbench API",
         "status": "ok",
-        "version": "1.0.0",
+        "version": API_VERSION,
         "docs_url": "/docs",
         "health_url": "/health",
         "api_base": "/api/v1",
@@ -122,7 +124,7 @@ def dashboard() -> FileResponse:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "fwb-api", "version": "1.0.0"}
+    return {"status": "ok", "service": "fwb-api", "version": API_VERSION}
 
 
 @app.post("/api/v1/scans")

@@ -55,7 +55,7 @@ function clearAssistantMessages() {
   refs.assistantChat.innerHTML = "";
   addAssistantMessage(
     "bot",
-    "Ask me about scan history, selected scan findings, entropy, or file type."
+    "Ask me about history, findings, CVEs, risk DNA, or hardening plan."
   );
 }
 
@@ -222,6 +222,14 @@ function buildRiskDna(result, findings) {
   return `Risk DNA ${tags.join("+")} | score ${score}/100 (${band})`;
 }
 
+function getHardeningSimulation(result) {
+  const simulation = result?.analysis?.hardening_simulation;
+  if (simulation && typeof simulation === "object") {
+    return simulation;
+  }
+  return null;
+}
+
 function assistantReply(questionRaw) {
   const question = normalizeQuestion(questionRaw);
   const result = currentResult();
@@ -300,6 +308,24 @@ function assistantReply(questionRaw) {
     "vulnerabilities",
     "cvss",
   ]);
+  const asksHardening = hasAny(question, [
+    "hardening",
+    "harden",
+    "mitigation",
+    "remediation",
+    "fix plan",
+    "action plan",
+    "reduce risk",
+    "secure this",
+  ]);
+  const asksWhatIf = hasAny(question, [
+    "what if",
+    "scenario",
+    "scenarios",
+    "quick patch",
+    "balanced sprint",
+    "aggressive lockdown",
+  ]);
   const asksRules = hasAny(question, [
     "rule",
     "rules",
@@ -313,7 +339,7 @@ function assistantReply(questionRaw) {
   const requestedSeverity = severityFromQuestion(question);
 
   if (asksHelp) {
-    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, YARA/rule matches, SBOM components, CVE candidates, entropy, file type, and risk DNA.";
+    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, YARA/rule matches, SBOM components, CVE candidates, entropy, file type, risk DNA, and hardening scenarios.";
   }
   if ((asksHistory && asksFindings) || (asksFindings && asksHistory)) {
     if (state.scans.length === 0) {
@@ -441,6 +467,41 @@ function assistantReply(questionRaw) {
       .join("; ");
     return `CVE candidates: ${count} (high=${confidence.high || 0}, medium=${confidence.medium || 0}, low=${confidence.low || 0}). Top: ${preview}.`;
   }
+  if (asksHardening || asksWhatIf) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    const simulation = getHardeningSimulation(result);
+    if (!simulation) {
+      return "Hardening simulation is not available in this scan result.";
+    }
+    const baseline = simulation.baseline || {};
+    const projected = simulation.projected || {};
+    if (asksWhatIf) {
+      const scenarios = Array.isArray(simulation.scenarios) ? simulation.scenarios : [];
+      if (scenarios.length === 0) {
+        return "No what-if scenarios are available for this scan.";
+      }
+      const preview = scenarios
+        .slice(0, 3)
+        .map(
+          (item) =>
+            `${item.name}: score ${item.projected_score} (${item.projected_band}), reduction ${item.reduction}`
+        )
+        .join("; ");
+      return `What-if scenarios from baseline ${baseline.score || "-"} (${baseline.band || "-"}): ${preview}.`;
+    }
+
+    const actions = Array.isArray(simulation.actions) ? simulation.actions : [];
+    const top = actions
+      .slice(0, 4)
+      .map(
+        (item) =>
+          `${item.title || "Unnamed action"} [${item.effort || "-"}, drop ${item.estimated_risk_reduction || 0}]`
+      )
+      .join("; ");
+    return `Hardening plan: baseline ${baseline.score || "-"} (${baseline.band || "-"}), projected ${projected.score || "-"} (${projected.band || "-"}), estimated reduction ${projected.estimated_reduction || 0}, actions ${simulation.actions_count || 0}. Top actions: ${top}.`;
+  }
   if (asksRules) {
     if (!result) {
       return "No selected scan yet.";
@@ -492,7 +553,7 @@ function assistantReply(questionRaw) {
     return "Next: inspect highest-severity findings, verify credentials/endpoints manually, then run firmware diff against previous version.";
   }
 
-  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, yara rules, sbom components, cve candidates, risk dna, or next steps.";
+  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, yara rules, sbom components, cve candidates, risk dna, hardening plan, what-if scenarios, or next steps.";
 }
 
 async function fetchJson(url, options = {}) {
