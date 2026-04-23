@@ -39,6 +39,7 @@ class ApiBackendTests(unittest.TestCase):
         self.assertIn("text/html", response.headers.get("content-type", ""))
         self.assertIn("Firmware Security Workbench", response.text)
         self.assertIn("Dashboard Assistant", response.text)
+        self.assertIn("Risk DNA", response.text)
 
     def test_dashboard_logo_asset(self) -> None:
         response = self.client.get("/dashboard/static/logo-fwb.svg")

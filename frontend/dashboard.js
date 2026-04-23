@@ -90,6 +90,118 @@ function hasAny(text, terms) {
   return terms.some((term) => text.includes(term));
 }
 
+function summarizeFinding(finding) {
+  const keywords = Array.isArray(finding.keywords) ? finding.keywords.join(",") : "-";
+  const text = String(finding.string || "").replace(/\s+/g, " ").trim();
+  const snippet = text.length > 58 ? `${text.slice(0, 58)}...` : text;
+  return `${finding.severity}@${finding.offset_hex} [${keywords}] ${snippet}`;
+}
+
+function severityFromQuestion(question) {
+  if (question.includes("critical")) {
+    return "critical";
+  }
+  if (question.includes("high")) {
+    return "high";
+  }
+  if (question.includes("medium")) {
+    return "medium";
+  }
+  if (question.includes("low")) {
+    return "low";
+  }
+  if (question.includes("info")) {
+    return "info";
+  }
+  return null;
+}
+
+function findingsBySeverity(findings, severity) {
+  return findings.filter((finding) => finding.severity === severity);
+}
+
+function findingsAtOrAbove(findings, severity) {
+  const minRank = SEVERITY_RANK[severity] ?? 0;
+  return findings.filter((finding) => (SEVERITY_RANK[finding.severity] ?? -1) >= minRank);
+}
+
+function credentialFindings(findings) {
+  return findings.filter((finding) => {
+    const text = String(finding.string || "").toLowerCase();
+    const keywords = Array.isArray(finding.keywords)
+      ? finding.keywords.map((keyword) => String(keyword).toLowerCase())
+      : [];
+    return (
+      hasAny(text, ["password", "passwd", "token", "secret", "api_key", "apikey", "ssid"]) ||
+      keywords.some((keyword) =>
+        hasAny(keyword, ["password", "passwd", "token", "secret", "credential", "ssid"])
+      )
+    );
+  });
+}
+
+function extractUrls(result, findings) {
+  const urls = new Set();
+  const regex = /\b(?:https?:\/\/|mqtt:\/\/|ws:\/\/|wss:\/\/|ftp:\/\/)[^\s"']+/gi;
+  const texts = [];
+
+  for (const finding of findings) {
+    texts.push(String(finding.string || ""));
+  }
+  const preview = result?.analysis?.strings_preview;
+  if (Array.isArray(preview)) {
+    texts.push(...preview.map((entry) => String(entry)));
+  }
+
+  for (const text of texts) {
+    let match = regex.exec(text);
+    while (match) {
+      urls.add(match[0]);
+      match = regex.exec(text);
+    }
+    regex.lastIndex = 0;
+  }
+
+  return Array.from(urls);
+}
+
+function buildRiskDna(result, findings) {
+  const top = highestSeverity(findings);
+  const topRank = top ? SEVERITY_RANK[top.severity] ?? 0 : 0;
+  const urls = extractUrls(result, findings);
+  const creds = credentialFindings(findings);
+  const hasDebug = findings.some((finding) =>
+    String(finding.string || "").toLowerCase().includes("debug")
+  );
+  const hasOta = findings.some((finding) =>
+    hasAny(String(finding.string || "").toLowerCase(), ["ota", "update", "firmware"])
+  );
+
+  const tags = [];
+  if (creds.length > 0) {
+    tags.push("CREDS");
+  }
+  if (urls.length > 0) {
+    tags.push("NET");
+  }
+  if (hasOta) {
+    tags.push("OTA");
+  }
+  if (hasDebug) {
+    tags.push("DEBUG");
+  }
+  if (tags.length === 0) {
+    tags.push("BASELINE");
+  }
+
+  const score = Math.min(
+    100,
+    findings.length * 8 + topRank * 15 + creds.length * 4 + (urls.length > 0 ? 10 : 0)
+  );
+  const band = score >= 75 ? "high" : score >= 45 ? "medium" : "low";
+  return `Risk DNA ${tags.join("+")} | score ${score}/100 (${band})`;
+}
+
 function assistantReply(questionRaw) {
   const question = normalizeQuestion(questionRaw);
   const result = currentResult();
@@ -132,9 +244,33 @@ function assistantReply(questionRaw) {
     "problems",
   ]);
   const asksNext = hasAny(question, ["next", "what should i do", "what now", "recommend"]);
+  const asksCredentials = hasAny(question, [
+    "credential",
+    "credentials",
+    "password",
+    "secret",
+    "token",
+    "api key",
+    "apikey",
+  ]);
+  const asksUrls = hasAny(question, [
+    "url",
+    "urls",
+    "endpoint",
+    "endpoints",
+    "link",
+    "links",
+    "mqtt",
+    "http",
+    "https",
+  ]);
+  const asksRiskDna = hasAny(question, ["risk dna", "dna", "risk profile", "risk fingerprint"]);
+  const asksAll = hasAny(question, ["all", "full", "everything"]);
+  const asksThreshold = hasAny(question, ["or above", "and above", "or higher", "and higher"]);
+  const requestedSeverity = severityFromQuestion(question);
 
   if (asksHelp) {
-    return "I can summarize selected scan, count history entries, report top severity, entropy, type, and suggest next checks.";
+    return "I can answer history, selected summary, findings by severity, credentials, URLs/endpoints, entropy, file type, and risk DNA.";
   }
   if ((asksHistory && asksFindings) || (asksFindings && asksHistory)) {
     if (state.scans.length === 0) {
@@ -192,6 +328,35 @@ function assistantReply(questionRaw) {
     }
     return `Top severity is ${top.severity} at ${top.offset_hex}, keywords ${Array.isArray(top.keywords) ? top.keywords.join(",") : "-"}.`;
   }
+  if (asksCredentials) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    const creds = credentialFindings(findings);
+    if (creds.length === 0) {
+      return "No credential-like findings detected in selected scan.";
+    }
+    return `Credential-like findings: ${creds.length}. ${creds
+      .slice(0, 4)
+      .map(summarizeFinding)
+      .join("; ")}.`;
+  }
+  if (asksUrls) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    const urls = extractUrls(result, findings);
+    if (urls.length === 0) {
+      return "No URLs/endpoints found in selected scan strings.";
+    }
+    return `Discovered ${urls.length} endpoint(s): ${urls.slice(0, 6).join(", ")}.`;
+  }
+  if (asksRiskDna) {
+    if (!result) {
+      return "No selected scan yet.";
+    }
+    return buildRiskDna(result, findings);
+  }
   if (asksFindings) {
     if (!result) {
       return "No selected scan yet. Click one from history first.";
@@ -199,16 +364,22 @@ function assistantReply(questionRaw) {
     if (findings.length === 0) {
       return "Selected scan has no suspicious findings.";
     }
-    const preview = findings
-      .slice(0, 3)
-      .map((finding) => {
-        const keys = Array.isArray(finding.keywords)
-          ? finding.keywords.join(",")
-          : "-";
-        return `${finding.severity}@${finding.offset_hex} [${keys}]`;
-      })
-      .join("; ");
-    return `Selected scan has ${findings.length} findings. Top entries: ${preview}.`;
+    if (requestedSeverity) {
+      const filtered = asksThreshold
+        ? findingsAtOrAbove(findings, requestedSeverity)
+        : findingsBySeverity(findings, requestedSeverity);
+      if (filtered.length === 0) {
+        return asksThreshold
+          ? `No findings at ${requestedSeverity} severity or above in selected scan.`
+          : `No ${requestedSeverity} severity findings in selected scan.`;
+      }
+      return `${filtered.length} ${requestedSeverity}${
+        asksThreshold ? "+" : ""
+      } finding(s): ${filtered.slice(0, 6).map(summarizeFinding).join("; ")}.`;
+    }
+    const toShow = asksAll ? findings.slice(0, 10) : findings.slice(0, 3);
+    const preview = toShow.map(summarizeFinding).join("; ");
+    return `Selected scan has ${findings.length} findings. ${asksAll ? "Top 10:" : "Top entries:"} ${preview}.`;
   }
   if (asksNext) {
     if (!result) {
@@ -221,7 +392,7 @@ function assistantReply(questionRaw) {
     return "Next: inspect highest-severity findings, verify credentials/endpoints manually, then run firmware diff against previous version.";
   }
 
-  return "I did not catch that yet. Try: history count, selected summary, top severity, entropy, latest scan, or next steps.";
+  return "I did not catch that yet. Try: scan history, selected summary, high findings, credentials, urls/endpoints, risk dna, or next steps.";
 }
 
 async function fetchJson(url, options = {}) {
