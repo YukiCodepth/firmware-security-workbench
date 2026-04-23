@@ -25,6 +25,14 @@ class ApiBackendTests(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["service"], "fwb-api")
 
+    def test_root_endpoint(self) -> None:
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["docs_url"], "/docs")
+        self.assertEqual(payload["api_base"], "/api/v1")
+
     def test_scan_create_list_and_show(self) -> None:
         firmware_bytes = (
             b"FWB_API_TEST\nwifi_password=test123\nmqtt://broker.local\nDEBUG: ready\n"

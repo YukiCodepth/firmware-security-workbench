@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 
 from cli.scanner import ScanError, scan_firmware
 from cli.storage import DEFAULT_DB_PATH, get_scan_record, list_scans, save_scan_result
@@ -51,6 +52,23 @@ app = FastAPI(
     version="0.3.0-dev",
     description="Local API for firmware scanning and scan history",
 )
+
+
+@app.get("/")
+def root() -> dict[str, object]:
+    return {
+        "service": "Firmware Security Workbench API",
+        "status": "ok",
+        "version": "0.3.0-dev",
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "api_base": "/api/v1",
+    }
+
+
+@app.get("/favicon.ico")
+def favicon() -> JSONResponse:
+    return JSONResponse(status_code=204, content=None)
 
 
 @app.get("/health")
