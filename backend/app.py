@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from cli.diff_engine import diff_scan_results
@@ -113,8 +113,8 @@ def root() -> dict[str, object]:
 
 
 @app.get("/favicon.ico")
-def favicon() -> JSONResponse:
-    return JSONResponse(status_code=204, content=None)
+def favicon() -> Response:
+    return Response(status_code=204)
 
 
 @app.get("/dashboard")

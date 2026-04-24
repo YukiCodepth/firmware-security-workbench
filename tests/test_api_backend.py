@@ -33,6 +33,11 @@ class ApiBackendTests(unittest.TestCase):
         self.assertEqual(payload["docs_url"], "/docs")
         self.assertEqual(payload["api_base"], "/api/v1")
 
+    def test_favicon_no_content(self) -> None:
+        response = self.client.get("/favicon.ico")
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.content, b"")
+
     def test_dashboard_entrypoint(self) -> None:
         response = self.client.get("/dashboard")
         self.assertEqual(response.status_code, 200)
