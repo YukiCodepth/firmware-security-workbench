@@ -9,6 +9,8 @@ venv/
 node_modules/
 dist/
 build/
+desktop/src-tauri/target/
+desktop/src-tauri/icons/
 
 # Local output
 reports/generated/

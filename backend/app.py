@@ -4,7 +4,8 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from cli.diff_engine import diff_scan_results
@@ -19,6 +20,27 @@ def _db_path_from_param(db_path: str | None) -> Path:
     if db_path is None or not db_path.strip():
         return DEFAULT_DB_PATH
     return Path(db_path)
+
+
+def _apply_uploaded_file_name(result: dict[str, object], file_name: str) -> None:
+    if isinstance(result.get("file"), dict):
+        result["file"]["name"] = file_name
+
+    sbom = result.get("sbom")
+    if not isinstance(sbom, dict):
+        return
+
+    metadata = sbom.get("metadata")
+    if isinstance(metadata, dict):
+        component = metadata.get("component")
+        if isinstance(component, dict):
+            component["name"] = file_name
+
+    components = sbom.get("components")
+    if isinstance(components, list) and components:
+        root_component = components[0]
+        if isinstance(root_component, dict) and root_component.get("bom-ref") == "firmware-root":
+            root_component["name"] = file_name
 
 
 def _scan_uploaded_file(
@@ -51,8 +73,10 @@ def _scan_uploaded_file(
             temp_path.unlink(missing_ok=True)
         uploaded_file.file.close()
 
-    if isinstance(result.get("file"), dict):
-        result["file"]["name"] = uploaded_file.filename or result["file"].get("name")
+    _apply_uploaded_file_name(
+        result,
+        uploaded_file.filename or str(result.get("file", {}).get("name", "upload.bin")),
+    )
     return result
 
 
@@ -78,8 +102,7 @@ def _scan_uploaded_payload(
             enable_rules=enable_rules,
             rules_dir=rules_dir,
         )
-        if isinstance(result.get("file"), dict):
-            result["file"]["name"] = file_name
+        _apply_uploaded_file_name(result, file_name)
         return result
     except ScanError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -92,6 +115,17 @@ app = FastAPI(
     title="Firmware Security Workbench API",
     version=API_VERSION,
     description="Local API for firmware scanning and scan history",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:4173",
+        "http://localhost:4173",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -113,8 +147,8 @@ def root() -> dict[str, object]:
 
 
 @app.get("/favicon.ico")
-def favicon() -> JSONResponse:
-    return JSONResponse(status_code=204, content=None)
+def favicon() -> Response:
+    return Response(status_code=204)
 
 
 @app.get("/dashboard")

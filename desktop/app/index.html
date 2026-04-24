@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firmware Security Workbench Desktop</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="rail" aria-label="Primary navigation">
+        <div class="brand-mark" aria-label="Firmware Security Workbench">FWB</div>
+        <button class="rail-button active" type="button" data-view="mission" data-target="mission-section" title="Mission Control" aria-label="Mission Control">
+          <span aria-hidden="true">M</span>
+        </button>
+        <button class="rail-button" type="button" data-view="scan" data-target="scan-section" title="Scan Studio" aria-label="Scan Studio">
+          <span aria-hidden="true">S</span>
+        </button>
+        <button class="rail-button" type="button" data-view="hardening" data-target="hardening-section" title="Hardening Studio" aria-label="Hardening Studio">
+          <span aria-hidden="true">H</span>
+        </button>
+        <button class="rail-button" type="button" data-view="reports" data-target="reports-section" title="Reports" aria-label="Reports">
+          <span aria-hidden="true">R</span>
+        </button>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Firmware Security Workbench</p>
+            <h1>Mission Control</h1>
+          </div>
+          <div class="topbar-actions">
+            <span id="api-state" class="status-pill">API offline</span>
+            <button id="refresh-btn" class="icon-button" type="button" title="Refresh" aria-label="Refresh">R</button>
+          </div>
+        </header>
+
+        <section id="mission-section" class="hero-grid" aria-label="Security overview">
+          <div class="risk-orbit">
+            <div class="score-ring">
+              <span id="risk-score">69</span>
+              <small id="risk-band">high</small>
+            </div>
+            <div>
+              <p class="metric-label">Risk DNA</p>
+              <strong id="risk-fingerprint">48f1b3013024db3635cd2440</strong>
+              <p id="risk-tags" class="muted">CREDS / NET / RULES / FINDINGS</p>
+            </div>
+          </div>
+
+          <div class="metric-strip">
+            <div>
+              <span class="metric-label">Findings</span>
+              <strong id="metric-findings">5</strong>
+            </div>
+            <div>
+              <span class="metric-label">Secrets</span>
+              <strong id="metric-secrets">1</strong>
+            </div>
+            <div>
+              <span class="metric-label">CVE candidates</span>
+              <strong id="metric-cves">0</strong>
+            </div>
+            <div>
+              <span class="metric-label">Hardening actions</span>
+              <strong id="metric-actions">7</strong>
+            </div>
+          </div>
+        </section>
+
+        <section id="scan-section" class="command-surface" aria-label="Firmware scan command surface">
+          <div class="panel-title-row">
+            <h2>Scan Studio</h2>
+            <button id="demo-btn" class="ghost-button" type="button">Load demo</button>
+          </div>
+          <form id="scan-form" class="scan-form">
+            <label class="file-drop" for="firmware-file">
+              <span id="file-label">Drop firmware or choose a file</span>
+              <input id="firmware-file" name="file" type="file" />
+            </label>
+            <div class="scan-controls">
+              <label>
+                <span>Min string length</span>
+                <input id="min-string-length" type="number" min="2" value="4" />
+              </label>
+              <label>
+                <span>Max strings</span>
+                <input id="max-strings" type="number" min="1" value="2000" />
+              </label>
+              <label class="switch">
+                <input id="save-scan" type="checkbox" checked />
+                <span>Save history</span>
+              </label>
+              <button class="primary-button" type="submit">Run scan</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="content-grid">
+          <div class="panel findings-panel">
+            <div class="panel-title-row">
+              <h2>Evidence Feed</h2>
+              <span id="selected-file" class="muted">demo-firmware.bin</span>
+            </div>
+            <ul id="finding-list" class="evidence-list"></ul>
+          </div>
+
+          <div id="hardening-section" class="panel hardening-panel">
+            <div class="panel-title-row">
+              <h2>Hardening Studio</h2>
+              <span id="projected-score" class="status-pill good">Projected 20</span>
+            </div>
+            <div id="scenario-list" class="scenario-list"></div>
+            <ul id="action-list" class="action-list"></ul>
+          </div>
+        </section>
+
+        <section id="reports-section" class="panel report-panel">
+          <div class="panel-title-row">
+            <h2>Release Timeline</h2>
+            <span class="muted">v1.1 desktop foundation</span>
+          </div>
+          <div class="timeline">
+            <div class="timeline-item done">CLI</div>
+            <div class="timeline-item done">API</div>
+            <div class="timeline-item done">Dashboard</div>
+            <div class="timeline-item done">Risk DNA</div>
+            <div class="timeline-item active">Desktop</div>
+            <div class="timeline-item">Installers</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./main.js" defer></script>
+  </body>
+</html>

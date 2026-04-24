@@ -33,6 +33,25 @@ class ApiBackendTests(unittest.TestCase):
         self.assertEqual(payload["docs_url"], "/docs")
         self.assertEqual(payload["api_base"], "/api/v1")
 
+    def test_favicon_no_content(self) -> None:
+        response = self.client.get("/favicon.ico")
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.content, b"")
+
+    def test_desktop_preview_origin_is_allowed(self) -> None:
+        response = self.client.options(
+            "/health",
+            headers={
+                "Origin": "http://127.0.0.1:4173",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers.get("access-control-allow-origin"),
+            "http://127.0.0.1:4173",
+        )
+
     def test_dashboard_entrypoint(self) -> None:
         response = self.client.get("/dashboard")
         self.assertEqual(response.status_code, 200)
@@ -78,6 +97,8 @@ class ApiBackendTests(unittest.TestCase):
         self.assertIn("hardening_simulation", created["analysis"])
         self.assertIn("hardening_actions_count", created["analysis"])
         self.assertIn("sbom", created)
+        self.assertEqual(created["sbom"]["metadata"]["component"]["name"], "api-demo.bin")
+        self.assertEqual(created["sbom"]["components"][0]["name"], "api-demo.bin")
         scan_id = created["storage"]["scan_id"]
         self.assertIsInstance(scan_id, int)
 
@@ -142,6 +163,8 @@ class ApiBackendTests(unittest.TestCase):
         self.assertIn("old_scan", payload)
         self.assertIn("new_scan", payload)
         self.assertIn("diff", payload)
+        self.assertEqual(payload["old_scan"]["sbom"]["components"][0]["name"], "fw-old.bin")
+        self.assertEqual(payload["new_scan"]["sbom"]["components"][0]["name"], "fw-new.bin")
         self.assertTrue(payload["diff"]["summary"]["changed"])
         self.assertIn("risk_shift", payload["diff"])
         self.assertIn("hardening_shift", payload["diff"])

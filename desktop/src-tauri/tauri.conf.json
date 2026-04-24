@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Firmware Security Workbench",
+  "version": "0.3.0",
+  "identifier": "dev.fwb.desktop",
+  "build": {
+    "beforeDevCommand": "npm run preview",
+    "beforeBuildCommand": "",
+    "devUrl": "http://127.0.0.1:4173",
+    "frontendDist": "../app"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Firmware Security Workbench",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 1024,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "DeveloperTool",
+    "shortDescription": "Firmware analysis desktop workbench",
+    "longDescription": "A local-first firmware security analysis desktop shell for scanning firmware, reviewing Risk DNA, and planning hardening actions."
+  }
+}
