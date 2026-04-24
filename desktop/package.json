@@ -1,11 +1,13 @@
 {
   "name": "firmware-security-workbench-desktop",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
+    "prebuild": "tauri icon app-icon.svg",
     "build": "tauri build",
+    "icon": "tauri icon app-icon.svg",
     "preview": "python3 -m http.server 4173 --directory app"
   },
   "devDependencies": {

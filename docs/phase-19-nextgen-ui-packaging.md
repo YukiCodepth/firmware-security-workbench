@@ -16,6 +16,8 @@ The app now has a shared visual direction across the browser dashboard and deskt
   - Windows
   - Linux
 - Tauri capability scaffold for native permissions.
+- Repeatable desktop dependency lockfile with `npm ci`.
+- Branded desktop icon source that is regenerated before packaging.
 - Test coverage for desktop shell files and packaging workflow presence.
 
 ## How To Preview The Web Dashboard
@@ -53,16 +55,18 @@ Desktop Packages
 
 The workflow uploads desktop bundle artifacts for each operating system.
 
-You can also create a desktop package tag:
+You can also create a desktop package tag. Use a fresh tag for each packaging attempt:
 
 ```bash
-git tag desktop-v0.1.0
-git push origin desktop-v0.1.0
+git tag desktop-v0.3.0
+git push origin desktop-v0.3.0
 ```
 
 ## Packaging Notes
 
-The current desktop app is an alpha shell that talks to the existing FastAPI backend when it is running. The next packaging milestone should bundle the scanner/runtime as a Tauri sidecar so the desktop app is fully self-contained.
+The current desktop app is an alpha shell that talks to the existing FastAPI backend when it is running. The package workflow builds macOS, Windows, and Linux artifacts and regenerates platform icons from `desktop/app-icon.svg` before running Tauri.
+
+The next packaging milestone should bundle the scanner/runtime as a Tauri sidecar so the desktop app is fully self-contained.
 
 ## Next Phase
 

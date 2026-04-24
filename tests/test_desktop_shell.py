@@ -32,7 +32,9 @@ class DesktopShellTests(unittest.TestCase):
             "desktop/app/index.html",
             "desktop/app/styles.css",
             "desktop/app/main.js",
+            "desktop/app-icon.svg",
             "desktop/package.json",
+            "desktop/package-lock.json",
             "desktop/src-tauri/tauri.conf.json",
             "desktop/src-tauri/capabilities/default.json",
             "desktop/src-tauri/Cargo.toml",
@@ -119,6 +121,14 @@ class DesktopShellTests(unittest.TestCase):
         self.assertIn("windows-latest", workflow)
         self.assertIn("ubuntu-latest", workflow)
         self.assertIn("actions/upload-artifact@v4", workflow)
+
+    def test_desktop_build_generates_icons_before_packaging(self) -> None:
+        package_json = json.loads(
+            (self.repo_root / "desktop" / "package.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(package_json["version"], "0.3.0")
+        self.assertEqual(package_json["scripts"]["prebuild"], "tauri icon app-icon.svg")
+        self.assertEqual(package_json["scripts"]["build"], "tauri build")
 
 
 if __name__ == "__main__":
