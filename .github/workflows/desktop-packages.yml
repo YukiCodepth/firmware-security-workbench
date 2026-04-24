@@ -6,6 +6,9 @@ on:
     tags:
       - "desktop-v*"
 
+permissions:
+  contents: write
+
 jobs:
   build-desktop:
     name: Build ${{ matrix.platform }}
@@ -68,3 +71,17 @@ jobs:
           name: fwb-desktop-${{ matrix.platform }}
           path: desktop/src-tauri/target/release/bundle/**/*
           if-no-files-found: error
+
+      - name: Publish installer to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Firmware Security Workbench Desktop ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            Desktop installer build for Firmware Security Workbench.
+
+            Assets:
+            - macOS: DMG installer
+            - Windows: MSI installer
+            - Linux: DEB package
+          files: desktop/src-tauri/target/release/bundle/**/*

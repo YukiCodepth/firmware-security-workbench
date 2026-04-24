@@ -123,15 +123,29 @@ class DesktopShellTests(unittest.TestCase):
         self.assertIn("bundle: dmg", workflow)
         self.assertIn("bundle: msi", workflow)
         self.assertIn("bundle: deb", workflow)
+        self.assertIn("permissions:", workflow)
+        self.assertIn("contents: write", workflow)
         self.assertIn("actions/upload-artifact@v4", workflow)
+        self.assertIn("softprops/action-gh-release@v2", workflow)
 
     def test_desktop_build_generates_icons_before_packaging(self) -> None:
         package_json = json.loads(
             (self.repo_root / "desktop" / "package.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(package_json["version"], "0.4.0")
+        self.assertEqual(package_json["version"], "0.5.0")
         self.assertEqual(package_json["scripts"]["prebuild"], "tauri icon app-icon.svg")
         self.assertEqual(package_json["scripts"]["build"], "tauri build")
+
+    def test_tauri_config_declares_platform_icons(self) -> None:
+        config = json.loads(
+            (self.repo_root / "desktop" / "src-tauri" / "tauri.conf.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        icons = config["bundle"]["icon"]
+        self.assertIn("icons/icon.ico", icons)
+        self.assertIn("icons/icon.icns", icons)
+        self.assertIn("icons/128x128.png", icons)
 
 
 if __name__ == "__main__":
