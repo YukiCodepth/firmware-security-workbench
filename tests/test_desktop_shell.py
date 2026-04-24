@@ -120,13 +120,16 @@ class DesktopShellTests(unittest.TestCase):
         self.assertIn("macos-latest", workflow)
         self.assertIn("windows-latest", workflow)
         self.assertIn("ubuntu-latest", workflow)
+        self.assertIn("bundle: dmg", workflow)
+        self.assertIn("bundle: msi", workflow)
+        self.assertIn("bundle: deb", workflow)
         self.assertIn("actions/upload-artifact@v4", workflow)
 
     def test_desktop_build_generates_icons_before_packaging(self) -> None:
         package_json = json.loads(
             (self.repo_root / "desktop" / "package.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(package_json["version"], "0.3.0")
+        self.assertEqual(package_json["version"], "0.4.0")
         self.assertEqual(package_json["scripts"]["prebuild"], "tauri icon app-icon.svg")
         self.assertEqual(package_json["scripts"]["build"], "tauri build")
 

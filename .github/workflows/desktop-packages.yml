@@ -14,10 +14,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - macos-latest
-          - windows-latest
-          - ubuntu-latest
+        include:
+          - platform: macos-latest
+            bundle: dmg
+          - platform: windows-latest
+            bundle: msi
+          - platform: ubuntu-latest
+            bundle: deb
 
     steps:
       - name: Checkout
@@ -57,7 +60,7 @@ jobs:
 
       - name: Build desktop package
         working-directory: desktop
-        run: npm run build
+        run: npm run build -- --bundles ${{ matrix.bundle }}
 
       - name: Upload desktop bundle
         uses: actions/upload-artifact@v4
