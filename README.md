@@ -27,6 +27,7 @@ Firmware security tools are often either very advanced research tools or small c
 - Firmware version diffing
 - Firmware Risk DNA profile
 - Hardening Simulator with what-if security action planning
+- Desktop app shell foundation for macOS, Windows, and Linux
 - HTML, Markdown, and JSON reports
 - Sample vulnerable firmware corpus for demos
 
@@ -62,9 +63,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 17 - Hardening Simulator`
+Current status: `Phase 18 - Desktop App Shell`
 
-The project includes the full roadmap feature set through `v1.0.0` and an innovation extension: Hardening Simulator for prioritized remediation actions and projected risk reduction scenarios.
+The project includes the full roadmap feature set through `v1.0.0`, the Phase 17 Hardening Simulator innovation, and a Phase 18 desktop app shell foundation for future native installers.
 
 ## Quick Start
 
@@ -171,6 +172,19 @@ Dashboard:
 http://127.0.0.1:8000/dashboard
 ```
 
+Preview desktop shell:
+
+```bash
+cd desktop
+python3 -m http.server 4173 --directory app
+```
+
+Then open:
+
+```text
+http://127.0.0.1:4173
+```
+
 ## Safety Scope
 
 This project is for defensive firmware analysis, developer education, and security auditing. It does not include exploit generation, unauthorized device access, credential abuse, or malware deployment.
@@ -182,6 +196,7 @@ backend/          FastAPI backend
 cli/              Command-line scanner
 docs/             Project docs, architecture, learning notes
 frontend/         Dashboard UI
+desktop/          Desktop app shell and Tauri scaffold
 .github/          CI workflow
 Dockerfile        Container packaging
 reports/          Report templates and generated report output
