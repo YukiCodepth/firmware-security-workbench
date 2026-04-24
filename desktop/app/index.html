@@ -10,16 +10,16 @@
     <div class="app-shell">
       <aside class="rail" aria-label="Primary navigation">
         <div class="brand-mark" aria-label="Firmware Security Workbench">FWB</div>
-        <button class="rail-button active" type="button" data-view="mission" title="Mission Control" aria-label="Mission Control">
+        <button class="rail-button active" type="button" data-view="mission" data-target="mission-section" title="Mission Control" aria-label="Mission Control">
           <span aria-hidden="true">M</span>
         </button>
-        <button class="rail-button" type="button" data-view="scan" title="Scan Studio" aria-label="Scan Studio">
+        <button class="rail-button" type="button" data-view="scan" data-target="scan-section" title="Scan Studio" aria-label="Scan Studio">
           <span aria-hidden="true">S</span>
         </button>
-        <button class="rail-button" type="button" data-view="hardening" title="Hardening Studio" aria-label="Hardening Studio">
+        <button class="rail-button" type="button" data-view="hardening" data-target="hardening-section" title="Hardening Studio" aria-label="Hardening Studio">
           <span aria-hidden="true">H</span>
         </button>
-        <button class="rail-button" type="button" data-view="reports" title="Reports" aria-label="Reports">
+        <button class="rail-button" type="button" data-view="reports" data-target="reports-section" title="Reports" aria-label="Reports">
           <span aria-hidden="true">R</span>
         </button>
       </aside>
@@ -36,7 +36,7 @@
           </div>
         </header>
 
-        <section class="hero-grid" aria-label="Security overview">
+        <section id="mission-section" class="hero-grid" aria-label="Security overview">
           <div class="risk-orbit">
             <div class="score-ring">
               <span id="risk-score">69</span>
@@ -69,7 +69,7 @@
           </div>
         </section>
 
-        <section class="command-surface" aria-label="Firmware scan command surface">
+        <section id="scan-section" class="command-surface" aria-label="Firmware scan command surface">
           <div class="panel-title-row">
             <h2>Scan Studio</h2>
             <button id="demo-btn" class="ghost-button" type="button">Load demo</button>
@@ -106,7 +106,7 @@
             <ul id="finding-list" class="evidence-list"></ul>
           </div>
 
-          <div class="panel hardening-panel">
+          <div id="hardening-section" class="panel hardening-panel">
             <div class="panel-title-row">
               <h2>Hardening Studio</h2>
               <span id="projected-score" class="status-pill good">Projected 20</span>
@@ -116,7 +116,7 @@
           </div>
         </section>
 
-        <section class="panel report-panel">
+        <section id="reports-section" class="panel report-panel">
           <div class="panel-title-row">
             <h2>Release Timeline</h2>
             <span class="muted">v1.1 desktop foundation</span>

@@ -59,6 +59,7 @@ const refs = {
   scenarioList: document.getElementById("scenario-list"),
   actionList: document.getElementById("action-list")
 };
+const railButtons = Array.from(document.querySelectorAll(".rail-button"));
 
 function getApiBase() {
   return "http://127.0.0.1:8000";
@@ -157,6 +158,19 @@ refs.firmwareFile.addEventListener("change", () => {
   const file = refs.firmwareFile.files?.[0];
   refs.fileLabel.textContent = file ? file.name : "Drop firmware or choose a file";
 });
+
+for (const button of railButtons) {
+  button.addEventListener("click", () => {
+    const targetId = button.dataset.target;
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    for (const item of railButtons) {
+      item.classList.toggle("active", item === button);
+    }
+  });
+}
 
 refs.scanForm.addEventListener("submit", submitScan);
 refs.demoBtn.addEventListener("click", () => renderScan(demoScan));

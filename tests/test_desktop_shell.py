@@ -2,7 +2,25 @@ from __future__ import annotations
 
 import json
 import unittest
+from html.parser import HTMLParser
 from pathlib import Path
+
+
+class IdCollector(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        for key, value in attrs:
+            if key == "id" and value is not None:
+                self.ids.add(value)
+
+
+def collect_ids(html: str) -> set[str]:
+    parser = IdCollector()
+    parser.feed(html)
+    return parser.ids
 
 
 class DesktopShellTests(unittest.TestCase):
@@ -35,6 +53,53 @@ class DesktopShellTests(unittest.TestCase):
         self.assertIn("Scan Studio", html)
         self.assertIn("Hardening Studio", html)
         self.assertIn("Release Timeline", html)
+        self.assertIn('data-target="mission-section"', html)
+        self.assertIn('data-target="scan-section"', html)
+        self.assertIn('data-target="hardening-section"', html)
+        self.assertIn('data-target="reports-section"', html)
+
+    def test_desktop_shell_script_wires_interactive_controls(self) -> None:
+        script = (self.repo_root / "desktop" / "app" / "main.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("railButtons", script)
+        self.assertIn("scrollIntoView", script)
+        self.assertIn("refs.scanForm.addEventListener", script)
+        self.assertIn("refs.demoBtn.addEventListener", script)
+        self.assertIn("refs.refreshBtn.addEventListener", script)
+        self.assertIn("refs.firmwareFile.addEventListener", script)
+
+    def test_dashboard_dom_contains_all_javascript_targets(self) -> None:
+        html = (self.repo_root / "frontend" / "index.html").read_text(encoding="utf-8")
+        ids = collect_ids(html)
+        required_ids = {
+            "scan-form",
+            "firmware-file",
+            "min-string-length",
+            "max-strings",
+            "history-limit",
+            "db-path",
+            "save-scan",
+            "scan-status",
+            "history-body",
+            "refresh-history",
+            "load-history",
+            "clear-detail-btn",
+            "mission-risk-score",
+            "mission-file-name",
+            "mission-summary",
+            "metric-file",
+            "metric-type",
+            "metric-entropy",
+            "metric-findings",
+            "finding-list",
+            "strings-list",
+            "assistant-chat",
+            "assistant-form",
+            "assistant-input",
+            "clear-assistant-btn",
+        }
+        self.assertTrue(required_ids.issubset(ids))
 
     def test_tauri_config_points_to_desktop_app(self) -> None:
         config = json.loads(
