@@ -16,9 +16,12 @@ class DesktopShellTests(unittest.TestCase):
             "desktop/app/main.js",
             "desktop/package.json",
             "desktop/src-tauri/tauri.conf.json",
+            "desktop/src-tauri/capabilities/default.json",
             "desktop/src-tauri/Cargo.toml",
             "desktop/src-tauri/src/main.rs",
             "docs/phase-18-desktop-app-shell.md",
+            "docs/phase-19-nextgen-ui-packaging.md",
+            ".github/workflows/desktop-packages.yml",
         ]
         for relative_path in expected_files:
             with self.subTest(path=relative_path):
@@ -42,6 +45,15 @@ class DesktopShellTests(unittest.TestCase):
         self.assertEqual(config["productName"], "Firmware Security Workbench")
         self.assertEqual(config["build"]["frontendDist"], "../app")
         self.assertEqual(config["build"]["devUrl"], "http://127.0.0.1:4173")
+
+    def test_desktop_package_workflow_targets_three_operating_systems(self) -> None:
+        workflow = (
+            self.repo_root / ".github" / "workflows" / "desktop-packages.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("macos-latest", workflow)
+        self.assertIn("windows-latest", workflow)
+        self.assertIn("ubuntu-latest", workflow)
+        self.assertIn("actions/upload-artifact@v4", workflow)
 
 
 if __name__ == "__main__":

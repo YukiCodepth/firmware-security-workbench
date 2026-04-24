@@ -6,185 +6,217 @@
     <title>Firmware Security Workbench Dashboard</title>
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
     />
     <link rel="stylesheet" href="/dashboard/static/dashboard.css" />
   </head>
   <body>
-    <header class="app-header">
-      <div class="brand-cluster">
+    <div class="app-frame">
+      <aside class="side-rail" aria-label="Workspace navigation">
         <img
           src="/dashboard/static/logo-fwb.svg"
           class="brand-logo"
           alt="Firmware Security Workbench logo"
         />
-        <div class="brand-block">
-          <h1>Firmware Security Workbench</h1>
-          <p class="subtitle">Dashboard Alpha</p>
-        </div>
-      </div>
-      <div class="header-actions">
-        <a class="icon-button" href="/docs" title="Open API docs" aria-label="Open API docs">
-          <span class="icon" aria-hidden="true">?</span>
-        </a>
-        <button id="refresh-history" class="icon-button" title="Refresh scan history" aria-label="Refresh scan history">
-          <span class="icon" aria-hidden="true">&#x21bb;</span>
-        </button>
-      </div>
-    </header>
+        <a class="rail-action active" href="#scan-form" title="Scan" aria-label="Scan">S</a>
+        <a class="rail-action" href="#history-table" title="History" aria-label="History">H</a>
+        <a class="rail-action" href="#finding-list" title="Evidence" aria-label="Evidence">E</a>
+        <a class="rail-action" href="#assistant-input" title="Assistant" aria-label="Assistant">A</a>
+      </aside>
 
-    <main class="layout">
-      <section class="panel scan-panel">
-        <h2>Scan Firmware</h2>
+      <main class="workspace">
+        <header class="app-header">
+          <div class="brand-block">
+            <p class="eyebrow">Firmware Security Workbench</p>
+            <h1>Threat Intelligence Console</h1>
+            <p class="subtitle">Local-first firmware scanning, Risk DNA, SBOM, CVE candidates, and hardening guidance.</p>
+          </div>
+          <div class="header-actions">
+            <a class="icon-button" href="/docs" title="Open API docs" aria-label="Open API docs">?</a>
+            <button id="refresh-history" class="icon-button" title="Refresh scan history" aria-label="Refresh scan history" type="button">&#x21bb;</button>
+          </div>
+        </header>
 
-        <form id="scan-form" class="scan-form">
-          <label for="firmware-file">Firmware file</label>
-          <input id="firmware-file" name="file" type="file" required />
-
-          <div class="controls-grid">
-            <label class="control-group" for="min-string-length">
-              <span>Min string length</span>
-              <input id="min-string-length" type="number" min="2" value="4" />
-            </label>
-
-            <label class="control-group" for="max-strings">
-              <span>Max strings</span>
-              <input id="max-strings" type="number" min="1" value="2000" />
-            </label>
-
-            <label class="control-group" for="history-limit">
-              <span>History limit</span>
-              <input id="history-limit" type="number" min="1" max="200" value="20" />
-            </label>
-
-            <label class="control-group" for="db-path">
-              <span>Database path</span>
-              <input
-                id="db-path"
-                type="text"
-                value="reports/generated/fwb_scans.sqlite3"
-                autocomplete="off"
-              />
-            </label>
+        <section class="mission-grid" aria-label="Mission overview">
+          <div class="risk-panel">
+            <div class="risk-core">
+              <span id="mission-risk-score">FWB</span>
+              <small>console</small>
+            </div>
+            <div>
+              <p class="metric-label">Current target</p>
+              <strong id="mission-file-name">No scan selected</strong>
+              <p id="mission-summary" class="muted">Run or select a scan to load live evidence.</p>
+            </div>
           </div>
 
-          <label class="checkbox-row" for="save-scan">
-            <input id="save-scan" type="checkbox" checked />
-            <span>Save scan to SQLite history</span>
-          </label>
-
-          <div class="button-row">
-            <button id="run-scan-btn" class="primary-button" type="submit">
-              <span class="icon" aria-hidden="true">&#x25b6;</span>
-              <span>Run Scan</span>
-            </button>
-            <button id="clear-detail-btn" class="secondary-button" type="button">
-              <span class="icon" aria-hidden="true">&#x2715;</span>
-              <span>Clear Detail</span>
-            </button>
+          <div class="metric-strip">
+            <div class="metric-tile">
+              <span class="metric-label">File</span>
+              <strong id="metric-file">-</strong>
+            </div>
+            <div class="metric-tile">
+              <span class="metric-label">Type</span>
+              <strong id="metric-type">-</strong>
+            </div>
+            <div class="metric-tile">
+              <span class="metric-label">Entropy</span>
+              <strong id="metric-entropy">-</strong>
+            </div>
+            <div class="metric-tile">
+              <span class="metric-label">Findings</span>
+              <strong id="metric-findings">-</strong>
+            </div>
           </div>
-        </form>
+        </section>
 
-        <div id="scan-status" class="status-line" aria-live="polite"></div>
-      </section>
+        <section class="primary-grid">
+          <section class="panel scan-panel">
+            <div class="panel-title-row">
+              <div>
+                <p class="eyebrow">Input</p>
+                <h2>Scan Firmware</h2>
+              </div>
+              <span id="scan-status" class="status-line" aria-live="polite"></span>
+            </div>
 
-      <section class="panel history-panel">
-        <div class="panel-title-row">
-          <h2>Saved Scans</h2>
-          <button id="load-history" class="icon-button" title="Reload list" aria-label="Reload list">
-            <span class="icon" aria-hidden="true">&#x21bb;</span>
-          </button>
-        </div>
+            <form id="scan-form" class="scan-form">
+              <label class="file-drop" for="firmware-file">
+                <span>Choose firmware image</span>
+                <input id="firmware-file" name="file" type="file" required />
+              </label>
 
-        <div class="history-wrap">
-          <table id="history-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>UTC</th>
-                <th>Type</th>
-                <th>Findings</th>
-                <th>File</th>
-              </tr>
-            </thead>
-            <tbody id="history-body"></tbody>
-          </table>
-        </div>
-      </section>
+              <div class="controls-grid">
+                <label class="control-group" for="min-string-length">
+                  <span>Min string length</span>
+                  <input id="min-string-length" type="number" min="2" value="4" />
+                </label>
 
-      <section class="panel detail-panel">
-        <h2>Scan Detail</h2>
-        <div class="metric-grid">
-          <div class="metric">
-            <div class="metric-label">File</div>
-            <div id="metric-file" class="metric-value">-</div>
+                <label class="control-group" for="max-strings">
+                  <span>Max strings</span>
+                  <input id="max-strings" type="number" min="1" value="2000" />
+                </label>
+
+                <label class="control-group" for="history-limit">
+                  <span>History limit</span>
+                  <input id="history-limit" type="number" min="1" max="200" value="20" />
+                </label>
+
+                <label class="control-group wide" for="db-path">
+                  <span>Database path</span>
+                  <input
+                    id="db-path"
+                    type="text"
+                    value="reports/generated/fwb_scans.sqlite3"
+                    autocomplete="off"
+                  />
+                </label>
+              </div>
+
+              <div class="button-row">
+                <label class="checkbox-row" for="save-scan">
+                  <input id="save-scan" type="checkbox" checked />
+                  <span>Save scan to SQLite history</span>
+                </label>
+                <button id="run-scan-btn" class="primary-button" type="submit">&#x25b6; Run Scan</button>
+                <button id="clear-detail-btn" class="secondary-button" type="button">&#x2715; Clear</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel history-panel">
+            <div class="panel-title-row">
+              <div>
+                <p class="eyebrow">Archive</p>
+                <h2>Saved Scans</h2>
+              </div>
+              <button id="load-history" class="icon-button" title="Reload list" aria-label="Reload list" type="button">&#x21bb;</button>
+            </div>
+
+            <div class="history-wrap">
+              <table id="history-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>UTC</th>
+                    <th>Type</th>
+                    <th>Findings</th>
+                    <th>File</th>
+                  </tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="evidence-grid">
+          <section class="panel detail-panel">
+            <div class="panel-title-row">
+              <div>
+                <p class="eyebrow">Evidence</p>
+                <h2>Top Findings</h2>
+              </div>
+              <span class="status-pill">Risk DNA ready</span>
+            </div>
+            <div class="detail-block">
+              <ul id="finding-list"></ul>
+            </div>
+          </section>
+
+          <section class="panel strings-panel">
+            <div class="panel-title-row">
+              <div>
+                <p class="eyebrow">Extracted</p>
+                <h2>Strings Preview</h2>
+              </div>
+              <span class="status-pill cool">Static analysis</span>
+            </div>
+            <div class="detail-block">
+              <ul id="strings-list"></ul>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel assistant-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">Copilot</p>
+              <h2>Dashboard Assistant</h2>
+            </div>
+            <button id="clear-assistant-btn" class="icon-button" title="Clear assistant chat" aria-label="Clear assistant chat" type="button">&#x2715;</button>
           </div>
-          <div class="metric">
-            <div class="metric-label">Type</div>
-            <div id="metric-type" class="metric-value">-</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">Entropy</div>
-            <div id="metric-entropy" class="metric-value">-</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">Findings</div>
-            <div id="metric-findings" class="metric-value">-</div>
-          </div>
-        </div>
 
-        <div class="detail-columns">
-          <div class="detail-block">
-            <h3>Top Findings</h3>
-            <ul id="finding-list"></ul>
+          <div class="assistant-quick">
+            <button class="assist-chip" data-ask="How many scans are in history?" type="button">History count</button>
+            <button class="assist-chip" data-ask="What is the most severe finding in selected scan?" type="button">Top severity</button>
+            <button class="assist-chip" data-ask="Give me a summary of selected scan." type="button">Selected summary</button>
+            <button class="assist-chip" data-ask="Show high findings only." type="button">High findings</button>
+            <button class="assist-chip" data-ask="Any credentials in selected scan?" type="button">Credentials</button>
+            <button class="assist-chip" data-ask="Show URLs and endpoints in selected scan." type="button">URLs/endpoints</button>
+            <button class="assist-chip" data-ask="Show YARA rule matches in selected scan." type="button">YARA matches</button>
+            <button class="assist-chip" data-ask="Show SBOM component candidates in selected scan." type="button">SBOM</button>
+            <button class="assist-chip" data-ask="Show CVE candidates in selected scan." type="button">CVE candidates</button>
+            <button class="assist-chip" data-ask="Give risk DNA for selected scan." type="button">Risk DNA</button>
+            <button class="assist-chip" data-ask="Show hardening plan for selected scan." type="button">Hardening plan</button>
+            <button class="assist-chip" data-ask="Show what-if hardening scenarios for selected scan." type="button">What-if</button>
           </div>
-          <div class="detail-block">
-            <h3>Strings Preview</h3>
-            <ul id="strings-list"></ul>
-          </div>
-        </div>
-      </section>
 
-      <section class="panel assistant-panel">
-        <div class="panel-title-row">
-          <h2>Dashboard Assistant</h2>
-          <button id="clear-assistant-btn" class="icon-button" title="Clear assistant chat" aria-label="Clear assistant chat">
-            <span class="icon" aria-hidden="true">&#x2715;</span>
-          </button>
-        </div>
+          <ul id="assistant-chat" class="assistant-chat"></ul>
 
-        <div class="assistant-quick">
-          <button class="assist-chip" data-ask="How many scans are in history?">History count</button>
-          <button class="assist-chip" data-ask="What is the most severe finding in selected scan?">Top severity</button>
-          <button class="assist-chip" data-ask="Give me a summary of selected scan.">Selected summary</button>
-          <button class="assist-chip" data-ask="Show high findings only.">High findings</button>
-          <button class="assist-chip" data-ask="Any credentials in selected scan?">Credentials</button>
-          <button class="assist-chip" data-ask="Show URLs and endpoints in selected scan.">URLs/endpoints</button>
-          <button class="assist-chip" data-ask="Show YARA rule matches in selected scan.">YARA matches</button>
-          <button class="assist-chip" data-ask="Show SBOM component candidates in selected scan.">SBOM</button>
-          <button class="assist-chip" data-ask="Show CVE candidates in selected scan.">CVE candidates</button>
-          <button class="assist-chip" data-ask="Give risk DNA for selected scan.">Risk DNA</button>
-          <button class="assist-chip" data-ask="Show hardening plan for selected scan.">Hardening plan</button>
-          <button class="assist-chip" data-ask="Show what-if hardening scenarios for selected scan.">What-if</button>
-        </div>
-
-        <ul id="assistant-chat" class="assistant-chat"></ul>
-
-        <form id="assistant-form" class="assistant-form">
-          <input
-            id="assistant-input"
-            type="text"
-            placeholder="Ask about findings, credentials, risk DNA, hardening plan..."
-            autocomplete="off"
-            required
-          />
-          <button class="primary-button" type="submit">
-            <span class="icon" aria-hidden="true">&#x27a4;</span>
-            <span>Ask</span>
-          </button>
-        </form>
-      </section>
-    </main>
+          <form id="assistant-form" class="assistant-form">
+            <input
+              id="assistant-input"
+              type="text"
+              placeholder="Ask about findings, credentials, risk DNA, hardening plan..."
+              autocomplete="off"
+              required
+            />
+            <button class="primary-button" type="submit">&#x27a4; Ask</button>
+          </form>
+        </section>
+      </main>
+    </div>
 
     <script src="/dashboard/static/dashboard.js" defer></script>
   </body>

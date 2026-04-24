@@ -17,6 +17,9 @@ const refs = {
   refreshHistory: document.getElementById("refresh-history"),
   loadHistory: document.getElementById("load-history"),
   clearDetail: document.getElementById("clear-detail-btn"),
+  missionRiskScore: document.getElementById("mission-risk-score"),
+  missionFileName: document.getElementById("mission-file-name"),
+  missionSummary: document.getElementById("mission-summary"),
   metricFile: document.getElementById("metric-file"),
   metricType: document.getElementById("metric-type"),
   metricEntropy: document.getElementById("metric-entropy"),
@@ -611,11 +614,17 @@ function renderDetail(record) {
   const result = record?.result || {};
   const file = result.file || {};
   const analysis = result.analysis || {};
+  const riskDna = analysis.risk_dna || {};
   const findings = Array.isArray(analysis.suspicious_findings)
     ? analysis.suspicious_findings
     : [];
   const preview = Array.isArray(analysis.strings_preview) ? analysis.strings_preview : [];
 
+  refs.missionRiskScore.textContent = riskDna.score ?? String(analysis.suspicious_count ?? "-");
+  refs.missionFileName.textContent = file.name || "Selected scan";
+  refs.missionSummary.textContent = `Risk ${riskDna.band || "unknown"} / entropy ${
+    analysis.entropy ?? "-"
+  } / findings ${analysis.suspicious_count ?? 0}`;
   refs.metricFile.textContent = file.name || "-";
   refs.metricType.textContent = file.type_guess || "-";
   refs.metricEntropy.textContent =
@@ -653,6 +662,9 @@ function renderDetail(record) {
 function clearDetail() {
   state.selectedScanId = null;
   state.selectedRecord = null;
+  refs.missionRiskScore.textContent = "FWB";
+  refs.missionFileName.textContent = "No scan selected";
+  refs.missionSummary.textContent = "Run or select a scan to load live evidence.";
   refs.metricFile.textContent = "-";
   refs.metricType.textContent = "-";
   refs.metricEntropy.textContent = "-";

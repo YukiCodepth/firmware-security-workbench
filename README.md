@@ -63,9 +63,9 @@ git checkout -b phase/02-cli-scanner-mvp
 
 ## Current Status
 
-Current status: `Phase 18 - Desktop App Shell`
+Current status: `Phase 19 - Next-Gen UI + Desktop Packaging`
 
-The project includes the full roadmap feature set through `v1.0.0`, the Phase 17 Hardening Simulator innovation, and a Phase 18 desktop app shell foundation for future native installers.
+The project includes the full roadmap feature set through `v1.0.0`, the Phase 17 Hardening Simulator innovation, a desktop app shell, a redesigned next-gen dashboard, and a GitHub Actions workflow for macOS, Windows, and Linux desktop package artifacts.
 
 ## Quick Start
 
@@ -183,6 +183,12 @@ Then open:
 
 ```text
 http://127.0.0.1:4173
+```
+
+Build desktop packages on GitHub:
+
+```text
+Actions -> Desktop Packages -> Run workflow
 ```
 
 ## Safety Scope

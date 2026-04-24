@@ -22,6 +22,7 @@ We will not create a GitHub Release after every phase. Releases happen only at m
 | `v1.0.0` | Stable Open-Source Release | Complete polished release | After Phase 16 |
 | `v1.1.0` | Hardening Simulator Innovation | What-if remediation planning with projected risk reduction | After Phase 17 |
 | `v1.2.0` | Desktop App Alpha | Native shell foundation for macOS, Windows, and Linux | After Phase 18 |
+| `v1.3.0` | Next-Gen Desktop Package Preview | Redesigned UI and first desktop package workflow | After Phase 19 |
 
 Packages are not needed yet. Later we may publish a Docker image, a Python CLI package, and standalone binaries if the project is stable enough.
 
@@ -49,6 +50,7 @@ Packages are not needed yet. Later we may publish a Docker image, a Python CLI p
 | 16 | `phase/16-final-showcase` | Polish release | Screenshots, demo, docs, `v1.0.0` tag | `v1.0.0` |
 | 17 | `phase/17-hardening-simulator` | Add unique hardening simulation | Prioritized mitigation actions + what-if scenarios | `v1.1.0` |
 | 18 | `phase/18-desktop-app-shell` | Start desktop app | Tauri-ready shell and polished desktop UI | `v1.2.0` alpha |
+| 19 | `phase/19-nextgen-ui-packaging` | Upgrade UI and package workflow | Next-gen dashboard, desktop shell polish, cross-OS GitHub packaging | `v1.3.0` preview |
 
 ## Build Philosophy
 
@@ -115,6 +117,6 @@ A phase is complete only when:
 
 ## Current Build Focus
 
-Current roadmap phase: `Phase 18 - Desktop App Shell`
+Current roadmap phase: `Phase 19 - Next-Gen UI + Desktop Packaging`
 
-Next implementation phase: `Phase 18 - Desktop App Shell`
+Next implementation phase: `Phase 20 - Native Desktop Workflows`
