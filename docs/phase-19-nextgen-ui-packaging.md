@@ -58,13 +58,13 @@ The workflow uploads desktop bundle artifacts for each operating system.
 You can also create a desktop package tag. Use a fresh tag for each packaging attempt:
 
 ```bash
-git tag desktop-v0.4.0
-git push origin desktop-v0.4.0
+git tag desktop-v0.5.0
+git push origin desktop-v0.5.0
 ```
 
 ## Packaging Notes
 
-The current desktop app is an alpha shell that talks to the existing FastAPI backend when it is running. The package workflow builds focused release artifacts for macOS (`dmg`), Windows (`msi`), and Linux (`deb`) and regenerates platform icons from `desktop/app-icon.svg` before running Tauri.
+The current desktop app is an alpha shell that talks to the existing FastAPI backend when it is running. The package workflow builds focused release artifacts for macOS (`dmg`), Windows (`msi`), and Linux (`deb`), regenerates platform icons from `desktop/app-icon.svg`, and attaches installers to a GitHub Release for the pushed desktop tag.
 
 The next packaging milestone should bundle the scanner/runtime as a Tauri sidecar so the desktop app is fully self-contained.
 
